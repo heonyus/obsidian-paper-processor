@@ -269,8 +269,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       .addDropdown((dropdown) =>
         dropdown
           .addOption("gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite (Google)")
-          .addOption("gemini-3.0-flash-preview", "Gemini 3.0 Flash Preview (Google)")
-          .addOption("gemini-3.0-pro-preview", "Gemini 3.0 Pro Preview (Google)")
+          .addOption("gemini-3-flash-preview", "Gemini 3 Flash Preview (Google)")
+          .addOption("gemini-3-pro-preview", "Gemini 3 Pro Preview (Google)")
           .setValue(this.plugin.settings.blogModel)
           .onChange(async (value) => {
             this.plugin.settings.blogModel = value;
