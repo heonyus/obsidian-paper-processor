@@ -54,7 +54,7 @@ export const DEFAULT_SETTINGS: PaperProcessorSettings = {
 
   // Model Settings
   ocrModel: "mistral-ocr-latest",
-  translationModel: "grok-4.1-fast-non-reasoning",
+  translationModel: "gemini-2.5-flash-lite-preview-05-20",
   translationLanguage: "Korean",
   blogModel: "gemini-3-flash-preview",
   slidesModel: "gemini-3-flash-preview",
@@ -236,9 +236,10 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           .addOption("claude-4.5-opus", "Claude 4.5 Opus (Anthropic)")
           .addOption("claude-4.5-sonnet", "Claude 4.5 Sonnet (Anthropic)")
           .addOption("claude-4.5-haiku", "Claude 4.5 Haiku (Anthropic)")
-          // Google Gemini models (latest: 3.0)
+          // Google Gemini models
           .addOption("gemini-3.0-pro", "Gemini 3.0 Pro (Google)")
           .addOption("gemini-3.0-flash", "Gemini 3.0 Flash (Google)")
+          .addOption("gemini-2.5-flash-lite-preview-05-20", "Gemini 2.5 Flash-Lite (Google)")
           // DeepSeek models
           .addOption("deepseek-r1", "DeepSeek R1 (DeepSeek)")
           .addOption("deepseek-v3", "DeepSeek V3 (DeepSeek)")
