@@ -296,6 +296,54 @@ export class GeminiClient {
   }
 
   /**
+   * Generate content with custom parts array (text + images)
+   * Used for sequential section generation with attached images
+   */
+  async generateContentWithParts(
+    parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }>,
+    options?: {
+      temperature?: number;
+      maxOutputTokens?: number;
+    }
+  ): Promise<ApiResponse<string>> {
+    try {
+      const url = `${this.baseUrl}/models/${this.model}:generateContent?key=${this.apiKey}`;
+
+      const body = {
+        contents: [{ parts }],
+        generationConfig: {
+          temperature: options?.temperature ?? 0.7,
+          maxOutputTokens: options?.maxOutputTokens ?? 8192,
+        },
+      };
+
+      const imageCount = parts.filter(p => p.inlineData).length;
+      console.log(`[Gemini] Content generation with ${imageCount} images`);
+
+      const response = await requestUrl({
+        url,
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        const data = response.json;
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          return { success: true, data: text };
+        }
+        return { success: false, error: "No text in response" };
+      }
+
+      return { success: false, error: `HTTP ${response.status}: ${response.text}` };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
    * Generate content with interleaved images and text
    * Each image is placed immediately after its description for better VLM understanding
    *
