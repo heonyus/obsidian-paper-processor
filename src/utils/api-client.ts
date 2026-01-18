@@ -25,18 +25,31 @@ export class ApiClient {
 
   async post<T>(endpoint: string, body: unknown): Promise<ApiResponse<T>> {
     try {
+      const url = `${this.baseUrl}${endpoint}`;
+      console.log(`[API] POST ${url}`);
+
       const params: RequestUrlParam = {
-        url: `${this.baseUrl}${endpoint}`,
+        url,
         method: "POST",
         headers: this.headers,
         body: JSON.stringify(body),
+        throw: false,  // HTTP 에러를 예외로 던지지 않고 response로 받음
       };
 
       const response = await requestUrl(params);
+      console.log(`[API] Response status: ${response.status}`);
 
       if (response.status >= 200 && response.status < 300) {
         return { success: true, data: response.json as T };
       } else {
+        console.error(`[API] Error ${response.status}:`, response.text);
+        // 더 상세한 에러 정보 출력
+        try {
+          const errorData = JSON.parse(response.text);
+          console.error(`[API] Error details:`, errorData);
+        } catch {
+          // JSON 파싱 실패 시 무시
+        }
         return {
           success: false,
           error: `HTTP ${response.status}: ${response.text}`,
@@ -44,6 +57,11 @@ export class ApiClient {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`[API] Exception: ${errorMessage}`);
+      // requestUrl 에러 상세 출력
+      if (error && typeof error === 'object' && 'status' in error) {
+        console.error(`[API] Request failed with status: ${(error as any).status}`);
+      }
       return { success: false, error: errorMessage };
     }
   }

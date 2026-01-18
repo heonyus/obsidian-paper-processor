@@ -88,7 +88,7 @@ export class ArxivSearchService {
   }
 
   /**
-   * arXiv 검색
+   * arXiv 검색 (OpenAlex fallback 포함)
    */
   async search(query: string, options: ArxivSearchOptions = {}): Promise<ArxivSearchResult> {
     try {
@@ -101,6 +101,19 @@ export class ArxivSearchService {
       const arxivId = this.extractArxivId(query);
       if (arxivId) {
         return await this.fetchById(arxivId);
+      }
+
+      // 긴 제목 형식의 쿼리인지 확인 (특수문자 포함, 30자 이상)
+      const looksLikeTitle = query.length > 30 && /[():,']/.test(query);
+
+      if (looksLikeTitle) {
+        // 제목 검색은 OpenAlex를 먼저 시도 (더 나은 제목 매칭)
+        console.log("[ArxivSearch] Long title query detected, trying OpenAlex first...");
+        const openAlexResult = await this.searchViaOpenAlex(query, maxResults);
+        if (openAlexResult.success && openAlexResult.papers && openAlexResult.papers.length > 0) {
+          return openAlexResult;
+        }
+        console.log("[ArxivSearch] OpenAlex returned no results, falling back to arXiv...");
       }
 
       // 키워드 검색
@@ -137,6 +150,15 @@ export class ArxivSearchService {
       const papers = this.parseAtomResponse(response.text);
       const totalResults = this.extractTotalResults(response.text);
 
+      // arXiv 결과가 없으면 OpenAlex fallback 시도
+      if (papers.length === 0 && query.length > 10) {
+        console.log("[ArxivSearch] No arXiv results, trying OpenAlex fallback...");
+        const openAlexResult = await this.searchViaOpenAlex(query, maxResults);
+        if (openAlexResult.success && openAlexResult.papers && openAlexResult.papers.length > 0) {
+          return openAlexResult;
+        }
+      }
+
       return {
         success: true,
         papers,
@@ -148,6 +170,154 @@ export class ArxivSearchService {
         error: error instanceof Error ? error.message : String(error),
       };
     }
+  }
+
+  /**
+   * OpenAlex API를 통한 논문 검색 (arXiv fallback용)
+   * OpenAlex는 무료 API로, 하루 100,000 credits 제공 (검색당 10 credits)
+   * https://docs.openalex.org/how-to-use-the-api/rate-limits-and-authentication
+   */
+  private async searchViaOpenAlex(query: string, maxResults: number = 10): Promise<ArxivSearchResult> {
+    try {
+      // 특수문자 정리 및 인코딩
+      const cleanedQuery = query
+        .replace(/['']/g, "'")  // 스마트 따옴표 변환
+        .replace(/[""]/g, '"')  // 스마트 쌍따옴표 변환
+        .trim();
+      const encodedQuery = encodeURIComponent(cleanedQuery);
+      const url = `https://api.openalex.org/works?search=${encodedQuery}&per_page=${maxResults}&mailto=obsidian-paper-processor@users.noreply.github.com`;
+
+      const response = await requestUrl({
+        url,
+        method: "GET",
+        headers: {
+          "User-Agent": "obsidian-paper-processor/1.0 (mailto:obsidian-paper-processor@users.noreply.github.com)",
+        },
+      });
+
+      if (response.status !== 200) {
+        console.warn(`[OpenAlex] API returned status ${response.status}`);
+        return { success: false, error: `OpenAlex API returned status ${response.status}` };
+      }
+
+      const data = JSON.parse(response.text);
+      const papers: ArxivPaper[] = [];
+
+      for (const work of data.results || []) {
+        // arXiv ID가 있는 논문만 추출
+        const arxivId = work.ids?.openalex ? this.extractArxivIdFromOpenAlex(work) : null;
+
+        if (arxivId) {
+          // arXiv ID가 있으면 arXiv에서 상세 정보 가져오기
+          const arxivResult = await this.fetchById(arxivId);
+          if (arxivResult.success && arxivResult.papers && arxivResult.papers.length > 0) {
+            papers.push(...arxivResult.papers);
+          }
+        } else {
+          // arXiv ID가 없어도 OpenAlex 정보로 논문 추가 (DOI 기반)
+          const paper = this.parseOpenAlexWork(work);
+          if (paper) {
+            papers.push(paper);
+          }
+        }
+
+        // 최대 결과 수 제한
+        if (papers.length >= maxResults) break;
+      }
+
+      return {
+        success: true,
+        papers,
+        totalResults: data.meta?.count || papers.length,
+      };
+    } catch (error) {
+      console.warn("[OpenAlex] Search failed:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * OpenAlex 작업에서 arXiv ID 추출
+   */
+  private extractArxivIdFromOpenAlex(work: any): string | null {
+    // locations에서 arXiv 찾기
+    for (const location of work.locations || []) {
+      if (location.source?.display_name?.toLowerCase().includes("arxiv")) {
+        const landingPage = location.landing_page_url || "";
+        const match = landingPage.match(/arxiv\.org\/abs\/([0-9]{4}\.[0-9]{4,5})/);
+        if (match) return match[1];
+      }
+      // PDF URL에서도 확인
+      const pdfUrl = location.pdf_url || "";
+      const pdfMatch = pdfUrl.match(/arxiv\.org\/pdf\/([0-9]{4}\.[0-9]{4,5})/);
+      if (pdfMatch) return pdfMatch[1];
+    }
+
+    // DOI에서 arXiv 확인 (10.48550/arxiv.XXXX.XXXXX 형식)
+    const doi = work.doi || "";
+    const doiMatch = doi.match(/10\.48550\/arxiv\.([0-9]{4}\.[0-9]{4,5})/i);
+    if (doiMatch) return doiMatch[1];
+
+    return null;
+  }
+
+  /**
+   * OpenAlex 작업을 ArxivPaper 형식으로 변환
+   */
+  private parseOpenAlexWork(work: any): ArxivPaper | null {
+    if (!work.title) return null;
+
+    const authors = (work.authorships || [])
+      .map((a: any) => a.author?.display_name)
+      .filter(Boolean);
+
+    // primary_location 또는 best_oa_location에서 URL 추출
+    const location = work.primary_location || work.best_oa_location || {};
+    const pdfUrl = location.pdf_url || "";
+    const landingUrl = location.landing_page_url || work.doi || "";
+
+    // arXiv ID 추출 시도
+    let arxivId = this.extractArxivIdFromOpenAlex(work);
+
+    // DOI에서 추출
+    if (!arxivId && work.doi) {
+      const doiMatch = work.doi.match(/10\.48550\/arxiv\.([0-9]{4}\.[0-9]{4,5})/i);
+      if (doiMatch) arxivId = doiMatch[1];
+    }
+
+    return {
+      arxivId: arxivId || `openalex:${work.id?.split("/").pop() || "unknown"}`,
+      title: work.title,
+      authors,
+      abstract: this.reconstructAbstract(work.abstract_inverted_index) || "",
+      published: work.publication_date || "",
+      updated: work.updated_date || work.publication_date || "",
+      categories: (work.topics || []).slice(0, 3).map((t: any) => t.display_name),
+      primaryCategory: work.primary_topic?.display_name || "",
+      pdfUrl: pdfUrl,
+      arxivUrl: arxivId ? `https://arxiv.org/abs/${arxivId}` : landingUrl,
+      doi: work.doi?.replace("https://doi.org/", ""),
+    };
+  }
+
+  /**
+   * OpenAlex inverted index에서 abstract 복원
+   */
+  private reconstructAbstract(invertedIndex: Record<string, number[]> | null): string {
+    if (!invertedIndex) return "";
+
+    const words: [string, number][] = [];
+    for (const [word, positions] of Object.entries(invertedIndex)) {
+      for (const pos of positions) {
+        words.push([word, pos]);
+      }
+    }
+
+    words.sort((a, b) => a[1] - b[1]);
+    return words.map(([word]) => word).join(" ");
   }
 
   /**

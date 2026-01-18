@@ -16,73 +16,73 @@ export interface TranslationProgress {
   totalPages?: number;
 }
 
-// 기존 paper-ocr-translator와 동일한 프롬프트
-const FAITHFUL_TRANSLATION_PROMPT = `당신은 AI/ML 학술 논문 전문 번역가입니다.
+// Faithful translation prompt template (multi-language support)
+const FAITHFUL_TRANSLATION_PROMPT = `You are a professional translator specializing in AI/ML academic papers.
 
-## 절대 규칙 (CRITICAL)
+## CRITICAL RULES
 
-1. **언어**:
-   - 출력은 반드시 한국어로 작성하세요.
-   - 영어 문장이 그대로 남지 않도록 모두 번역하세요.
+1. **Language**:
+   - Output MUST be written entirely in {target_language}.
+   - Translate ALL sentences completely. No source language sentences should remain untranslated.
 
-2. **완전성 최우선**:
-   - 모든 문장, 모든 단어를 번역
-   - 축약, 요약, 생략 절대 금지
-   - 정보 추가 금지, 의미 변경 금지
+2. **Completeness is Top Priority**:
+   - Translate every sentence, every word
+   - NO abbreviation, summarization, or omission allowed
+   - NO adding information, NO changing meaning
 
-3. **전문 용어 병기 (강제)**:
-   - AI/CS 학술 용어는 첫 등장에 반드시 영어(한국어) 병기
-   - 예: LLM(대형 언어 모델), attention mechanism(어텐션 메커니즘)
-   - 재등장은 영어만 또는 영어(한국어) 중 선택 가능
-   - 고유명사, 모델명, 데이터셋명은 영어 유지
+3. **Technical Term Annotation (Mandatory)**:
+   - For AI/CS academic terms, annotate with English(target language translation) on first occurrence
+   - Example: LLM(Large Language Model), attention mechanism(attention mechanism in {target_language})
+   - On reoccurrence, you may use English only or English(translation)
+   - Proper nouns, model names, and dataset names should remain in English
 
-4. **수식/참조 보존**:
-   - 수식($$...$$, $...$) 내용은 한 글자도 변경 금지
-   - Figure X, Table Y, Equation Z, 인용 [1] 형식 유지
-   - 섹션 참조 유지
+4. **Preserve Equations/References**:
+   - Do NOT modify any content within equations ($$...$$, $...$)
+   - Maintain Figure X, Table Y, Equation Z, citation [1] formats
+   - Preserve section references
 
-5. **OCR 가독성 보정 허용 (내용 불변)**:
-   - 문단/줄바꿈은 가독성 향상을 위해 조정 가능
-   - 긴 줄이 4~5줄 이상 이어지면 문장 경계에서 줄바꿈
-   - 한 문단에 4~5문장 이상이면 2~3문단으로 분리
-   - 3개 이상 나열은 불릿(-) 또는 넘버링(1., 2., 3.)으로 변환 가능
-   - "(1)...(2)...(3)..." 패턴은 넘버링 리스트로 정리
+5. **OCR Readability Correction Allowed (Content Unchanged)**:
+   - Paragraph/line breaks may be adjusted for readability
+   - If a line continues for 4-5+ lines, add line breaks at sentence boundaries
+   - If a paragraph has 4-5+ sentences, split into 2-3 paragraphs
+   - Lists of 3+ items may be converted to bullets (-) or numbering (1., 2., 3.)
+   - "(1)...(2)...(3)..." patterns should be organized into numbered lists
 
-6. **수식 블록 정리**:
-   - \`$$\`만 단독으로 있으면 가능한 경우 블록 쌍을 맞춰 정리
-   - 수식 내용 자체는 변경 금지
+6. **Equation Block Formatting**:
+   - If \`$$\` appears alone, try to match block pairs when possible
+   - Do NOT modify the equation content itself
 
-7. **가독성 강화 규칙**:
-   - 긴 문장(40자 이상)은 2~3개로 분리
-   - 각 문장 끝에 빈 줄 1개 추가
-   - 너무 짧은 문장(10자 미만)은 의미가 자연스러우면 병합
-   - 복잡한 조건절/열거는 불릿으로 분리
-   - 긴 문단(5문장 이상)은 주제 전환 지점에서 분리
-   - 불필요한 수동태/중복 표현은 최소화하되 의미는 유지
-   - "~것이다", "~것으로 보인다"는 간결하게 정리
+7. **Readability Enhancement Rules**:
+   - Split long sentences (40+ characters) into 2-3 sentences
+   - Add 1 blank line after each sentence
+   - Merge very short sentences (<10 characters) if it flows naturally
+   - Complex conditionals/enumerations should be split into bullets
+   - Long paragraphs (5+ sentences) should be split at topic transitions
+   - Minimize unnecessary passive voice/redundant expressions while preserving meaning
+   - Simplify verbose expressions while keeping the meaning intact
 
-8. **서식/라텍스 렌더링 보정**:
-   - 강조가 필요한 핵심 용어/소제목은 굵게(**...**) 또는 기울임(*...*)로 표시 가능
-   - 단, 원문 의미를 바꾸거나 과도하게 남용하지 말 것
-   - 라텍스 수식은 렌더링 오류가 나지 않도록 괄호/중괄호/백슬래시 균형 점검
-   - \`\\mathcal\`, \`\\mathbf\`, \`\\langle\` 등 명령어가 끊기거나 잘못 인식된 경우 문맥을 보고 바로잡기
-   - 수식 내용은 유지하되, 깨진 토큰/누락된 괄호/잘못된 구분 기호는 복원 가능
+8. **Formatting/LaTeX Rendering Correction**:
+   - Key terms/subheadings that need emphasis may use bold (**...**) or italics (*...*)
+   - Do not overuse or change the original meaning
+   - Check LaTeX equations for balanced parentheses/braces/backslashes
+   - Fix broken tokens/missing parentheses/incorrect delimiters in commands like \`\\mathcal\`, \`\\mathbf\`, \`\\langle\` based on context
+   - Preserve equation content, but restore broken tokens/missing parentheses/incorrect delimiters
 
-## 번역 스타일
+## Translation Style
 
-- 존댓말 사용하지 마세요 ("합니다" X → "한다" O)
-- 학술적 톤: "~이다", "~한다", "~된다"
-- 단정적 표현 사용
+- Use formal academic tone appropriate for {target_language}
+- Use declarative statements
+- Maintain scholarly register throughout
 
-## 이전 문맥 (참고용, 번역 안 함)
+## Previous Context (Reference only, do NOT translate)
 {previous_context}
 
-## 현재 페이지 (아래를 번역하세요)
+## Current Page (Translate the content below)
 {text}
 
-## 출력
-순수 마크다운만 출력 (코드 블록 없이).
-내용은 그대로 유지하되, 가독성 향상을 위한 줄바꿈/리스트 정리는 허용됩니다.`;
+## Output
+Output pure markdown only (no code blocks).
+Preserve the content as-is, but readability improvements via line breaks/list formatting are allowed.`;
 
 /**
  * Translation Service - 기존 paper-ocr-translator와 동일한 동작
@@ -135,18 +135,20 @@ export class TranslatorService {
     const client = this.createClient();
     const pages = this.splitByPages(content);
     const translations: string[] = [];
-    let previousContext = "(첫 페이지)";
+    let previousContext = "(First page)";
+    const targetLanguage = this.settings.translationLanguage || "Korean";
 
-    this.updateProgress("translating", "번역 시작...", 0, 0, pages.length);
+    this.updateProgress("translating", "Starting translation...", 0, 0, pages.length);
 
     for (let i = 0; i < pages.length; i++) {
       const page = pages[i];
       const percent = Math.round(((i + 1) / pages.length) * 100);
 
-      this.updateProgress("translating", `페이지 ${i + 1}/${pages.length} 번역 중...`, percent, i + 1, pages.length);
+      this.updateProgress("translating", `Translating page ${i + 1}/${pages.length}...`, percent, i + 1, pages.length);
 
-      // Build prompt with context
+      // Build prompt with context and target language
       const prompt = FAITHFUL_TRANSLATION_PROMPT
+        .replace(/{target_language}/g, targetLanguage)
         .replace("{previous_context}", previousContext)
         .replace("{text}", page);
 
@@ -186,8 +188,8 @@ export class TranslatorService {
     const fullTranslation = translations.join("\n\n");
     await this.saveFile(outputFolder, "translated_raw.md", fullTranslation);
 
-    this.updateProgress("complete", "번역 완료!", 100);
-    showSuccess("번역 완료!");
+    this.updateProgress("complete", "Translation complete!", 100);
+    showSuccess("Translation complete!");
 
     return {
       success: true,
@@ -196,6 +198,8 @@ export class TranslatorService {
   }
 
   private createClient(): OpenAICompatibleClient {
+    console.log(`[Translator] Creating client with model: ${this.settings.translationModel}`);
+    console.log(`[Translator] API key set: ${this.settings.grokApiKey ? 'Yes (' + this.settings.grokApiKey.substring(0, 10) + '...)' : 'No'}`);
     return new OpenAICompatibleClient(
       "https://api.x.ai/v1",
       this.settings.grokApiKey,

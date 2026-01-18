@@ -6,6 +6,10 @@ export interface PaperProcessorSettings {
   mistralApiKey: string;
   grokApiKey: string;
   geminiApiKey: string;
+  openaiApiKey: string;
+  anthropicApiKey: string;
+  deepseekApiKey: string;
+  groqApiKey: string;
 
   // General Settings
   outputFolder: string;
@@ -13,6 +17,7 @@ export interface PaperProcessorSettings {
   // Model Settings
   ocrModel: string;
   translationModel: string;
+  translationLanguage: string;
   blogModel: string;
   slidesModel: string;
 
@@ -39,13 +44,18 @@ export const DEFAULT_SETTINGS: PaperProcessorSettings = {
   mistralApiKey: "",
   grokApiKey: "",
   geminiApiKey: "",
+  openaiApiKey: "",
+  anthropicApiKey: "",
+  deepseekApiKey: "",
+  groqApiKey: "",
 
   // General Settings
   outputFolder: "papers",
 
   // Model Settings
   ocrModel: "mistral-ocr-latest",
-  translationModel: "grok-4-1-fast-non-reasoning",
+  translationModel: "grok-4.1-fast-non-reasoning",
+  translationLanguage: "Korean",
   blogModel: "gemini-3-flash-preview",
   slidesModel: "gemini-3-flash-preview",
 
@@ -100,11 +110,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Grok API Key")
-      .setDesc("Required for translation (xAI Grok, OpenAI-compatible)")
+      .setName("xAI Grok API Key")
+      .setDesc("For Grok models (grok-4.1, grok-4, etc.)")
       .addText((text) =>
         text
-          .setPlaceholder("Enter your Grok/xAI API key")
+          .setPlaceholder("Enter your xAI API key")
           .setValue(this.plugin.settings.grokApiKey)
           .onChange(async (value) => {
             this.plugin.settings.grokApiKey = value;
@@ -113,14 +123,66 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Gemini API Key")
-      .setDesc("Required for blog generation and slides creation")
+      .setName("OpenAI API Key")
+      .setDesc("For GPT models (gpt-5.2, gpt-4o, etc.)")
+      .addText((text) =>
+        text
+          .setPlaceholder("Enter your OpenAI API key")
+          .setValue(this.plugin.settings.openaiApiKey)
+          .onChange(async (value) => {
+            this.plugin.settings.openaiApiKey = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Anthropic API Key")
+      .setDesc("For Claude models (claude-4.5-opus, claude-4.5-sonnet, etc.)")
+      .addText((text) =>
+        text
+          .setPlaceholder("Enter your Anthropic API key")
+          .setValue(this.plugin.settings.anthropicApiKey)
+          .onChange(async (value) => {
+            this.plugin.settings.anthropicApiKey = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Google Gemini API Key")
+      .setDesc("For Gemini models (gemini-3.0-pro, gemini-3.0-flash, etc.)")
       .addText((text) =>
         text
           .setPlaceholder("Enter your Google Gemini API key")
           .setValue(this.plugin.settings.geminiApiKey)
           .onChange(async (value) => {
             this.plugin.settings.geminiApiKey = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("DeepSeek API Key")
+      .setDesc("For DeepSeek models (deepseek-r1, deepseek-v3, etc.)")
+      .addText((text) =>
+        text
+          .setPlaceholder("Enter your DeepSeek API key")
+          .setValue(this.plugin.settings.deepseekApiKey)
+          .onChange(async (value) => {
+            this.plugin.settings.deepseekApiKey = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Groq API Key")
+      .setDesc("For fast inference models via Groq")
+      .addText((text) =>
+        text
+          .setPlaceholder("Enter your Groq API key")
+          .setValue(this.plugin.settings.groqApiKey)
+          .onChange(async (value) => {
+            this.plugin.settings.groqApiKey = value;
             await this.plugin.saveSettings();
           })
       );
@@ -159,13 +221,55 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Translation Model")
-      .setDesc("Grok model for translation (xAI)")
-      .addText((text) =>
-        text
-          .setPlaceholder("grok-4-1-fast-non-reasoning")
+      .setDesc("Select AI model for translation (requires corresponding API key)")
+      .addDropdown((dropdown) =>
+        dropdown
+          // xAI Grok models (latest)
+          .addOption("grok-4.1-fast-non-reasoning", "Grok 4.1 Fast Non-Reasoning (xAI)")
+          .addOption("grok-4.1-fast", "Grok 4.1 Fast (xAI)")
+          .addOption("grok-4", "Grok 4 (xAI)")
+          // OpenAI models (latest: 5.2)
+          .addOption("gpt-5.2", "GPT-5.2 (OpenAI)")
+          .addOption("gpt-5.2-mini", "GPT-5.2 Mini (OpenAI)")
+          .addOption("gpt-4o", "GPT-4o (OpenAI)")
+          // Anthropic Claude models (latest: 4.5)
+          .addOption("claude-4.5-opus", "Claude 4.5 Opus (Anthropic)")
+          .addOption("claude-4.5-sonnet", "Claude 4.5 Sonnet (Anthropic)")
+          .addOption("claude-4.5-haiku", "Claude 4.5 Haiku (Anthropic)")
+          // Google Gemini models (latest: 3.0)
+          .addOption("gemini-3.0-pro", "Gemini 3.0 Pro (Google)")
+          .addOption("gemini-3.0-flash", "Gemini 3.0 Flash (Google)")
+          // DeepSeek models
+          .addOption("deepseek-r1", "DeepSeek R1 (DeepSeek)")
+          .addOption("deepseek-v3", "DeepSeek V3 (DeepSeek)")
+          // Groq models (fast inference)
+          .addOption("llama-3.3-70b-versatile", "Llama 3.3 70B (Groq)")
+          .addOption("deepseek-r1-distill-llama-70b", "DeepSeek R1 Distill 70B (Groq)")
           .setValue(this.plugin.settings.translationModel)
           .onChange(async (value) => {
-            this.plugin.settings.translationModel = value || "grok-4-1-fast-non-reasoning";
+            this.plugin.settings.translationModel = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Translation Language")
+      .setDesc("Target language for paper translation")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("Korean", "Korean (한국어)")
+          .addOption("Japanese", "Japanese (日本語)")
+          .addOption("Chinese", "Chinese (中文)")
+          .addOption("Spanish", "Spanish (Español)")
+          .addOption("French", "French (Français)")
+          .addOption("German", "German (Deutsch)")
+          .addOption("Portuguese", "Portuguese (Português)")
+          .addOption("Russian", "Russian (Русский)")
+          .addOption("Italian", "Italian (Italiano)")
+          .addOption("Vietnamese", "Vietnamese (Tiếng Việt)")
+          .setValue(this.plugin.settings.translationLanguage)
+          .onChange(async (value) => {
+            this.plugin.settings.translationLanguage = value;
             await this.plugin.saveSettings();
           })
       );
