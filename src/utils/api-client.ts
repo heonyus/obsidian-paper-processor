@@ -163,7 +163,16 @@ export class OpenAICompatibleClient extends ApiClient {
 }
 
 /**
- * Google Gemini API client
+ * Image data for multimodal requests
+ */
+export interface ImageData {
+  mimeType: string;
+  data: string;  // Base64 encoded image data
+  name?: string;
+}
+
+/**
+ * Google Gemini API client with Multimodal support
  */
 export class GeminiClient {
   private apiKey: string;
@@ -211,6 +220,79 @@ export class GeminiClient {
       const errorMessage = error instanceof Error ? error.message : String(error);
       return { success: false, error: errorMessage };
     }
+  }
+
+  /**
+   * Generate content with images (Multimodal)
+   * Sends both text and images to Gemini API for analysis
+   */
+  async generateContentWithImages(prompt: string, images: ImageData[], options?: {
+    temperature?: number;
+    maxOutputTokens?: number;
+  }): Promise<ApiResponse<string>> {
+    try {
+      const url = `${this.baseUrl}/models/${this.model}:generateContent?key=${this.apiKey}`;
+
+      // Build parts array with text and images
+      const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+
+      // Add text prompt
+      parts.push({ text: prompt });
+
+      // Add images
+      for (const img of images) {
+        parts.push({
+          inlineData: {
+            mimeType: img.mimeType,
+            data: img.data,
+          },
+        });
+      }
+
+      const body = {
+        contents: [{ parts }],
+        generationConfig: {
+          temperature: options?.temperature ?? 0.7,
+          maxOutputTokens: options?.maxOutputTokens ?? 8192,
+        },
+      };
+
+      console.log(`[Gemini] Multimodal request with ${images.length} images`);
+
+      const response = await requestUrl({
+        url,
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        const data = response.json;
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          return { success: true, data: text };
+        }
+        return { success: false, error: "No text in response" };
+      }
+
+      return { success: false, error: `HTTP ${response.status}: ${response.text}` };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
+   * Analyze a single image with context
+   * Used for deep analysis of paper figures
+   */
+  async analyzeImage(image: ImageData, context: string, analysisPrompt: string): Promise<ApiResponse<string>> {
+    const fullPrompt = `${analysisPrompt}\n\n## Paper Context\n${context}\n\nAnalyze this image:`;
+
+    return this.generateContentWithImages(fullPrompt, [image], {
+      temperature: 0.3,
+      maxOutputTokens: 3072,
+    });
   }
 }
 

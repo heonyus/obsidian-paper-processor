@@ -1,5 +1,5 @@
 import { App, TFile, TFolder } from "obsidian";
-import { GeminiClient, showError, showSuccess } from "../utils/api-client";
+import { GeminiClient, ImageData, showError, showSuccess } from "../utils/api-client";
 import type { PaperProcessorSettings } from "../settings";
 import { arxivCategoriesToTags, extractTopicTags, addWikilinks } from "../utils/obsidian-format";
 
@@ -132,7 +132,7 @@ export class BlogGeneratorService {
   }
 
   /**
-   * Generate a blog post from a paper
+   * Generate a blog post from a paper using Multimodal API
    */
   async generate(paperFolder: string): Promise<BlogResult> {
     if (!this.settings.geminiApiKey) {
@@ -168,26 +168,65 @@ export class BlogGeneratorService {
         this.updateProgress("analyzing", "⚠️ No metadata.json found", 15);
       }
 
-      // Get available images
-      const images = await this.getAvailableImages(paperFolder);
+      // Load images with Base64 data for multimodal API
+      this.updateProgress("analyzing", "🖼️ Loading images for multimodal analysis...", 20);
+      const images = await this.loadImagesWithData(paperFolder, 10);
+
       if (images.length > 0) {
-        this.updateProgress("analyzing", `🖼️ Found ${images.length} images: ${images.slice(0, 3).join(", ")}${images.length > 3 ? "..." : ""}`, 20);
+        this.updateProgress("analyzing", `🖼️ Loaded ${images.length} images: ${images.slice(0, 3).map(i => i.name).join(", ")}${images.length > 3 ? "..." : ""}`, 22);
+
+        // Analyze each image individually (Deep Analysis)
+        const client = new GeminiClient(this.settings.geminiApiKey, this.settings.blogModel);
+        const paperContext = `Title: ${metadata?.title || 'Unknown'}\n\nAbstract/Content:\n${content.slice(0, 2000)}`;
+
+        for (let i = 0; i < images.length; i++) {
+          const img = images[i];
+          this.updateProgress("analyzing", `🔍 Deep analyzing image (${i + 1}/${images.length}): ${img.name}`, 25 + (i * 3));
+
+          try {
+            const analysis = await this.analyzeImage(client, img, paperContext);
+            img.analysis = analysis;
+            this.updateProgress("analyzing", `✅ Analyzed: ${img.name}`, 25 + ((i + 1) * 3));
+          } catch (err) {
+            console.error(`Failed to analyze image ${img.name}:`, err);
+            img.analysis = "(분석 실패)";
+          }
+        }
       } else {
-        this.updateProgress("analyzing", "⚠️ No images found in images/ folder", 20);
+        this.updateProgress("analyzing", "⚠️ No images found in images/ folder", 25);
       }
 
-      this.updateProgress("generating", `🤖 Model: ${this.settings.blogModel}`, 25);
-      this.updateProgress("generating", `🌐 Language: ${this.settings.blogLanguage}, Style: ${this.settings.blogStyle}`, 28);
-      this.updateProgress("generating", "⏳ Calling Gemini API (this may take 30-60 seconds)...", 30);
+      this.updateProgress("generating", `🤖 Model: ${this.settings.blogModel}`, 55);
+      this.updateProgress("generating", `🌐 Language: ${this.settings.blogLanguage}, Style: ${this.settings.blogStyle}`, 58);
+      this.updateProgress("generating", "⏳ Generating blog with multimodal API (this may take 1-2 minutes)...", 60);
 
-      // Build prompt
+      // Build prompt with image analysis results
       const stylePrompt = BLOG_PROMPTS[this.settings.blogStyle] || BLOG_PROMPTS.technical;
       const langInstruction = LANGUAGE_INSTRUCTIONS[this.settings.blogLanguage] || LANGUAGE_INSTRUCTIONS.ko;
 
-      // Image instruction
-      const imageInstruction = images.length > 0
-        ? `\n\nAVAILABLE IMAGES (use these in your blog post with Obsidian embed syntax ![[images/filename]]):\n${images.map((img: string) => `- images/${img}`).join("\n")}\n\nIMPORTANT: You MUST include relevant images from the list above in appropriate sections of the blog post. Use the Obsidian image embed syntax: ![[images/filename.png]]\nFor example: ![[images/${images[0]}]]\nInclude at least 2-3 key figures that illustrate the main concepts.`
-        : "";
+      // Build image instruction with deep analysis results
+      let imageInstruction = "";
+      if (images.length > 0) {
+        imageInstruction = `\n\n## AVAILABLE IMAGES WITH ANALYSIS
+You MUST include these images in your blog post with Obsidian embed syntax ![[images/filename]].
+For each image, write detailed explanations based on the analysis provided.
+
+`;
+        for (const img of images) {
+          imageInstruction += `### ${img.relativePath}
+[Deep Analysis]
+${img.analysis || "(No analysis available)"}
+
+`;
+        }
+        imageInstruction += `
+IMPORTANT:
+- Include ALL relevant images in appropriate sections
+- For each image, write 10-15 lines of detailed explanation
+- Reference specific details from the analysis above
+- Use Obsidian embed syntax: ![[${images[0].relativePath}]]
+`;
+      }
 
       const fullPrompt = `${stylePrompt}
 
@@ -205,20 +244,31 @@ ${content}
 ---
 Generate the blog post now. Output markdown only, no explanations.`;
 
-      // Call Gemini
+      // Call Gemini with images (Multimodal)
       const client = new GeminiClient(this.settings.geminiApiKey, this.settings.blogModel);
       const promptLength = fullPrompt.length;
-      this.updateProgress("generating", `📝 Prompt size: ${(promptLength / 1024).toFixed(1)}KB`, 35);
+      this.updateProgress("generating", `📝 Prompt size: ${(promptLength / 1024).toFixed(1)}KB + ${images.length} images`, 65);
 
       const startTime = Date.now();
-      const result = await client.generateContent(fullPrompt, {
-        temperature: 0.7,
-        maxOutputTokens: 8192,
-      });
+
+      // Use multimodal API if we have images
+      let result;
+      if (images.length > 0) {
+        result = await client.generateContentWithImages(fullPrompt, images, {
+          temperature: 0.7,
+          maxOutputTokens: 8192,
+        });
+      } else {
+        result = await client.generateContent(fullPrompt, {
+          temperature: 0.7,
+          maxOutputTokens: 8192,
+        });
+      }
+
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
       if (!result.success || !result.data) {
-        this.updateProgress("generating", `❌ API Error: ${result.error}`, 40);
+        this.updateProgress("generating", `❌ API Error: ${result.error}`, 70);
         return {
           success: false,
           error: result.error || "Blog generation failed",
@@ -226,8 +276,8 @@ Generate the blog post now. Output markdown only, no explanations.`;
       }
 
       const outputLength = result.data.length;
-      this.updateProgress("generating", `✅ Response received in ${elapsed}s (${(outputLength / 1024).toFixed(1)}KB)`, 75);
-      this.updateProgress("saving", "💾 Processing and saving blog post...", 80);
+      this.updateProgress("generating", `✅ Response received in ${elapsed}s (${(outputLength / 1024).toFixed(1)}KB)`, 85);
+      this.updateProgress("saving", "💾 Processing and saving blog post...", 90);
 
       // Clean up response (remove code blocks if present)
       let blogContent = result.data;
@@ -244,14 +294,15 @@ Generate the blog post now. Output markdown only, no explanations.`;
       const existing = this.app.vault.getAbstractFileByPath(blogPath);
       if (existing instanceof TFile) {
         await this.app.vault.modify(existing, finalContent);
-        this.updateProgress("saving", `📝 Updated existing: ${blogPath}`, 90);
+        this.updateProgress("saving", `📝 Updated existing: ${blogPath}`, 95);
       } else {
         await this.app.vault.create(blogPath, finalContent);
-        this.updateProgress("saving", `📝 Created new file: ${blogPath}`, 90);
+        this.updateProgress("saving", `📝 Created new file: ${blogPath}`, 95);
       }
 
       const finalWordCount = finalContent.split(/\s+/).length;
       this.updateProgress("complete", `✅ Blog post generated! (${finalWordCount.toLocaleString()} words)`, 100);
+      this.updateProgress("complete", `🖼️ Included ${images.length} images with detailed analysis`, 100);
       showSuccess("Blog post generated successfully");
 
       return {
@@ -303,23 +354,113 @@ Generate the blog post now. Output markdown only, no explanations.`;
   }
 
   /**
-   * Get list of available images in the paper folder
+   * Load images with Base64 data for multimodal API
    */
-  private async getAvailableImages(folder: string): Promise<string[]> {
+  private async loadImagesWithData(folder: string, maxImages = 10, maxImageBytes = 4 * 1024 * 1024): Promise<Array<ImageData & { name: string; relativePath: string; analysis?: string }>> {
     const imagesFolder = this.app.vault.getAbstractFileByPath(`${folder}/images`);
 
     if (!(imagesFolder instanceof TFolder)) {
       return [];
     }
 
-    const imageFiles: string[] = [];
+    const imageFiles: TFile[] = [];
     for (const child of imagesFolder.children) {
       if (child instanceof TFile && /\.(png|jpg|jpeg|gif|webp)$/i.test(child.name)) {
-        imageFiles.push(child.name);
+        imageFiles.push(child);
       }
     }
 
-    return imageFiles;
+    // Sort by name and limit
+    imageFiles.sort((a, b) => a.name.localeCompare(b.name));
+    const filesToProcess = imageFiles.slice(0, maxImages);
+
+    const images: Array<ImageData & { name: string; relativePath: string; analysis?: string }> = [];
+
+    for (const file of filesToProcess) {
+      try {
+        // Check file size
+        const stats = await this.app.vault.adapter.stat(`${folder}/images/${file.name}`);
+        if (stats && stats.size > maxImageBytes) {
+          console.log(`⚠️ Skipping large image: ${file.name} (${(stats.size / 1024 / 1024).toFixed(2)}MB)`);
+          continue;
+        }
+
+        // Read binary and convert to base64
+        const arrayBuffer = await this.app.vault.readBinary(file);
+        const base64 = this.arrayBufferToBase64(arrayBuffer);
+
+        // Determine MIME type
+        const ext = file.extension.toLowerCase();
+        const mimeTypes: Record<string, string> = {
+          png: "image/png",
+          jpg: "image/jpeg",
+          jpeg: "image/jpeg",
+          gif: "image/gif",
+          webp: "image/webp",
+        };
+        const mimeType = mimeTypes[ext] || "image/png";
+
+        images.push({
+          name: file.name,
+          relativePath: `images/${file.name}`,
+          mimeType,
+          data: base64,
+        });
+      } catch (err) {
+        console.error(`Failed to load image ${file.name}:`, err);
+      }
+    }
+
+    return images;
+  }
+
+  /**
+   * Convert ArrayBuffer to Base64 string
+   */
+  private arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  /**
+   * Analyze a single image using Gemini multimodal API
+   */
+  private async analyzeImage(client: GeminiClient, image: ImageData & { name: string }, paperContext: string): Promise<string> {
+    const analysisPrompt = `You are an expert at analyzing academic paper figures.
+
+Extract ALL details from this image and provide structured analysis:
+
+## Visual Inventory
+[List all visible elements: text, shapes, data points, colors, annotations]
+
+## Core Findings
+[3-5 key takeaways]
+
+## Detailed Analysis
+[Paragraph explaining the image comprehensively]
+
+## Connection to Paper
+[How this supports the paper's argument]
+
+## Technical Details
+[Numbers, dimensions, hyperparameters extracted]
+
+Output in structured markdown.`;
+
+    const result = await client.analyzeImage(
+      { mimeType: image.mimeType, data: image.data },
+      paperContext,
+      analysisPrompt
+    );
+
+    if (result.success && result.data) {
+      return result.data;
+    }
+    return "(분석 실패)";
   }
 
   /**
