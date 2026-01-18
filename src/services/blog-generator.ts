@@ -143,7 +143,7 @@ export class BlogGeneratorService {
     }
 
     try {
-      this.updateProgress("analyzing", "Reading paper content...", 10);
+      this.updateProgress("analyzing", `📂 Reading from folder: ${paperFolder}`, 5);
 
       // Try to read translated content first, fall back to original
       const content = await this.getPaperContent(paperFolder);
@@ -153,14 +153,32 @@ export class BlogGeneratorService {
           error: "No paper content found. Run OCR or provide markdown files.",
         };
       }
+      const contentLength = content.length;
+      const wordCount = content.split(/\s+/).length;
+      this.updateProgress("analyzing", `📄 Paper content loaded: ${wordCount.toLocaleString()} words (${(contentLength / 1024).toFixed(1)}KB)`, 10);
 
       // Read metadata if available
       const metadata = await this.getMetadata(paperFolder);
+      if (metadata) {
+        this.updateProgress("analyzing", `📋 Metadata: "${metadata.title || 'Unknown'}"`, 15);
+        if (metadata.arxiv_id) {
+          this.updateProgress("analyzing", `🔗 arXiv ID: ${metadata.arxiv_id}`, 17);
+        }
+      } else {
+        this.updateProgress("analyzing", "⚠️ No metadata.json found", 15);
+      }
 
       // Get available images
       const images = await this.getAvailableImages(paperFolder);
+      if (images.length > 0) {
+        this.updateProgress("analyzing", `🖼️ Found ${images.length} images: ${images.slice(0, 3).join(", ")}${images.length > 3 ? "..." : ""}`, 20);
+      } else {
+        this.updateProgress("analyzing", "⚠️ No images found in images/ folder", 20);
+      }
 
-      this.updateProgress("generating", "Generating blog post...", 30);
+      this.updateProgress("generating", `🤖 Model: ${this.settings.blogModel}`, 25);
+      this.updateProgress("generating", `🌐 Language: ${this.settings.blogLanguage}, Style: ${this.settings.blogStyle}`, 28);
+      this.updateProgress("generating", "⏳ Calling Gemini API (this may take 30-60 seconds)...", 30);
 
       // Build prompt
       const stylePrompt = BLOG_PROMPTS[this.settings.blogStyle] || BLOG_PROMPTS.technical;
@@ -189,19 +207,27 @@ Generate the blog post now. Output markdown only, no explanations.`;
 
       // Call Gemini
       const client = new GeminiClient(this.settings.geminiApiKey, this.settings.blogModel);
+      const promptLength = fullPrompt.length;
+      this.updateProgress("generating", `📝 Prompt size: ${(promptLength / 1024).toFixed(1)}KB`, 35);
+
+      const startTime = Date.now();
       const result = await client.generateContent(fullPrompt, {
         temperature: 0.7,
         maxOutputTokens: 8192,
       });
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
       if (!result.success || !result.data) {
+        this.updateProgress("generating", `❌ API Error: ${result.error}`, 40);
         return {
           success: false,
           error: result.error || "Blog generation failed",
         };
       }
 
-      this.updateProgress("saving", "Saving blog post...", 80);
+      const outputLength = result.data.length;
+      this.updateProgress("generating", `✅ Response received in ${elapsed}s (${(outputLength / 1024).toFixed(1)}KB)`, 75);
+      this.updateProgress("saving", "💾 Processing and saving blog post...", 80);
 
       // Clean up response (remove code blocks if present)
       let blogContent = result.data;
@@ -218,11 +244,14 @@ Generate the blog post now. Output markdown only, no explanations.`;
       const existing = this.app.vault.getAbstractFileByPath(blogPath);
       if (existing instanceof TFile) {
         await this.app.vault.modify(existing, finalContent);
+        this.updateProgress("saving", `📝 Updated existing: ${blogPath}`, 90);
       } else {
         await this.app.vault.create(blogPath, finalContent);
+        this.updateProgress("saving", `📝 Created new file: ${blogPath}`, 90);
       }
 
-      this.updateProgress("complete", "Blog post generated!", 100);
+      const finalWordCount = finalContent.split(/\s+/).length;
+      this.updateProgress("complete", `✅ Blog post generated! (${finalWordCount.toLocaleString()} words)`, 100);
       showSuccess("Blog post generated successfully");
 
       return {

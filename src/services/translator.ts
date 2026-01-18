@@ -167,13 +167,22 @@ export class TranslatorService {
     const model = this.settings.translationModel;
     const isGemini = model.startsWith("gemini-");
 
-    this.updateProgress("translating", "Starting translation...", 0, 0, pages.length);
+    const totalChars = content.length;
+    const totalWords = content.split(/\s+/).length;
+    this.updateProgress("translating", `📄 Document: ${pages.length} pages, ${totalWords.toLocaleString()} words (${(totalChars / 1024).toFixed(1)}KB)`, 0, 0, pages.length);
+    this.updateProgress("translating", `🤖 Model: ${model}`, 1, 0, pages.length);
+    this.updateProgress("translating", `🌐 Target Language: ${targetLanguage}`, 2, 0, pages.length);
+
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    const startTimeTotal = Date.now();
 
     for (let i = 0; i < pages.length; i++) {
       const page = pages[i];
+      const pageWords = page.split(/\s+/).length;
       const percent = Math.round(((i + 1) / pages.length) * 100);
 
-      this.updateProgress("translating", `Translating page ${i + 1}/${pages.length}...`, percent, i + 1, pages.length);
+      this.updateProgress("translating", `📖 Page ${i + 1}/${pages.length}: ${pageWords.toLocaleString()} words`, percent, i + 1, pages.length);
 
       // Build prompt with context and target language
       const prompt = FAITHFUL_TRANSLATION_PROMPT
@@ -182,6 +191,9 @@ export class TranslatorService {
         .replace("{text}", page);
 
       let result: { success: boolean; data?: string; error?: string };
+
+      const pageStartTime = Date.now();
+      totalInputTokens += prompt.length / 4; // rough estimate
 
       if (isGemini) {
         const geminiClient = new GeminiClient(this.settings.geminiApiKey, model);
@@ -193,9 +205,15 @@ export class TranslatorService {
         ], { temperature: 0.3, maxTokens: 16000 });
       }
 
+      const pageElapsed = ((Date.now() - pageStartTime) / 1000).toFixed(1);
+
       if (!result.success || !result.data) {
+        this.updateProgress("translating", `❌ Page ${i + 1} failed: ${result.error}`, percent, i + 1, pages.length);
         return { success: false, error: result.error || "Translation failed" };
       }
+
+      totalOutputTokens += result.data.length / 4; // rough estimate
+      this.updateProgress("translating", `✅ Page ${i + 1} done in ${pageElapsed}s (${result.data.split(/\s+/).length} words)`, percent, i + 1, pages.length);
 
       // Remove code blocks if LLM wrapped output
       let translated = result.data;
@@ -223,9 +241,15 @@ export class TranslatorService {
 
     // Save translation
     const fullTranslation = translations.join("\n\n");
+    const totalElapsed = ((Date.now() - startTimeTotal) / 1000).toFixed(1);
+    const translatedWords = fullTranslation.split(/\s+/).length;
+
+    this.updateProgress("translating", `💾 Saving to ${outputFolder}/translated_raw.md...`, 98, pages.length, pages.length);
     await this.saveFile(outputFolder, "translated_raw.md", fullTranslation);
 
-    this.updateProgress("complete", "Translation complete!", 100);
+    this.updateProgress("complete", `✅ Translation complete!`, 100);
+    this.updateProgress("complete", `📊 Total: ${pages.length} pages, ${translatedWords.toLocaleString()} words in ${totalElapsed}s`, 100);
+    this.updateProgress("complete", `⚡ Estimated tokens: ~${Math.round(totalInputTokens).toLocaleString()} in, ~${Math.round(totalOutputTokens).toLocaleString()} out`, 100);
     showSuccess("Translation complete!");
 
     return {

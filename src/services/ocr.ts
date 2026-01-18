@@ -63,34 +63,49 @@ export class OCRService {
     }
 
     try {
-      this.updateProgress("uploading", "Reading PDF file...", 10);
+      this.updateProgress("uploading", `📂 Source: ${pdfFile.path}`, 5);
+      this.updateProgress("uploading", "📖 Reading PDF file...", 10);
 
       // Read PDF file
       const pdfData = await this.app.vault.readBinary(pdfFile);
+      const pdfSizeKB = (pdfData.byteLength / 1024).toFixed(1);
+      const pdfSizeMB = (pdfData.byteLength / (1024 * 1024)).toFixed(2);
+      this.updateProgress("uploading", `📄 PDF loaded: ${pdfSizeMB}MB (${pdfSizeKB}KB)`, 15);
 
-      this.updateProgress("processing", "Sending to Mistral OCR...", 30);
+      this.updateProgress("processing", `🤖 Model: ${this.settings.ocrModel}`, 20);
+      this.updateProgress("processing", "⏳ Sending to Mistral OCR API (this may take 1-3 minutes)...", 25);
 
       // Create client and process
       const client = new MistralOCRClient(this.settings.mistralApiKey, this.settings.ocrModel);
+      const startTime = Date.now();
       const result = await client.processDocument(pdfData);
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
       if (!result.success || !result.data) {
+        this.updateProgress("processing", `❌ OCR API Error: ${result.error}`, 30);
         return {
           success: false,
           error: result.error || "OCR processing failed",
         };
       }
 
-      this.updateProgress("extracting", "Extracting content...", 60);
+      this.updateProgress("extracting", `✅ OCR complete in ${elapsed}s`, 55);
+
+      // Count pages from markdown
+      const pageCount = (result.data.markdown.match(/<!-- Page \d+ -->/g) || []).length;
+      const wordCount = result.data.markdown.split(/\s+/).length;
+      const imageCount = result.data.images?.length || 0;
+      this.updateProgress("extracting", `📊 Extracted: ${pageCount} pages, ${wordCount.toLocaleString()} words, ${imageCount} images`, 60);
 
       // Generate slug from filename
       const slug = this.generateSlug(pdfFile.basename);
       const outputFolderPath = `${this.settings.outputFolder}/${slug}`;
+      this.updateProgress("extracting", `📁 Output folder: ${outputFolderPath}`, 65);
 
       // Ensure output folder exists
       await this.ensureFolder(outputFolderPath);
 
-      this.updateProgress("saving", "Saving markdown and images...", 80);
+      this.updateProgress("saving", "💾 Saving markdown file...", 70);
 
       // Fix image paths in markdown - change ![id](id) to ![id](images/id)
       let markdown = result.data.markdown;
@@ -102,13 +117,18 @@ export class OCRService {
       // Save markdown (overwrite if exists)
       const markdownPath = `${outputFolderPath}/original.md`;
       await this.saveFile(markdownPath, markdown);
+      const markdownSizeKB = (markdown.length / 1024).toFixed(1);
+      this.updateProgress("saving", `📝 Saved: original.md (${markdownSizeKB}KB)`, 75);
 
       // Save images
       const savedImages: Array<{ id: string; path: string }> = [];
       if (result.data.images && result.data.images.length > 0) {
         const imagesFolder = `${outputFolderPath}/images`;
         await this.ensureFolder(imagesFolder);
+        this.updateProgress("saving", `🖼️ Saving ${result.data.images.length} images...`, 80);
 
+        let savedCount = 0;
+        let totalImageSize = 0;
         for (const img of result.data.images) {
           if (img.data && img.data.length > 0) {
             try {
@@ -121,13 +141,20 @@ export class OCRService {
               if (imgBuffer.byteLength > 0) {
                 await this.saveBinaryFile(imgPath, imgBuffer);
                 savedImages.push({ id: img.id, path: imgPath });
+                savedCount++;
+                totalImageSize += imgBuffer.byteLength;
               }
             } catch (imgError) {
               console.error(`Failed to save image ${img.id}:`, imgError);
+              this.updateProgress("saving", `⚠️ Failed to save image: ${img.id}`, 85);
               // Continue with next image
             }
           }
         }
+        const totalImageSizeMB = (totalImageSize / (1024 * 1024)).toFixed(2);
+        this.updateProgress("saving", `✅ Saved ${savedCount} images (${totalImageSizeMB}MB total)`, 90);
+      } else {
+        this.updateProgress("saving", "ℹ️ No images to save", 90);
       }
 
       // Save metadata (overwrite if exists)
@@ -142,8 +169,11 @@ export class OCRService {
         `${outputFolderPath}/metadata.json`,
         JSON.stringify(metadata, null, 2)
       );
+      this.updateProgress("saving", "📋 Saved: metadata.json", 95);
 
-      this.updateProgress("complete", "OCR complete!", 100);
+      this.updateProgress("complete", `✅ OCR complete!`, 100);
+      this.updateProgress("complete", `📁 Output: ${outputFolderPath}`, 100);
+      this.updateProgress("complete", `📊 Summary: ${pageCount} pages, ${wordCount.toLocaleString()} words, ${savedImages.length} images`, 100);
       showSuccess(`OCR complete: ${slug}`);
 
       return {
