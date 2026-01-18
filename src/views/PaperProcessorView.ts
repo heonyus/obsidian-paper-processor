@@ -322,9 +322,24 @@ export class PaperProcessorView extends ItemView {
     const optionsContainer = container.createEl("div", { cls: "pp-options" });
     optionsContainer.createEl("h4", { text: "Processing Options" });
 
+    // Get language code for display
+    const langMap: Record<string, string> = {
+      "Korean": "KO",
+      "Japanese": "JA",
+      "Chinese": "ZH",
+      "Spanish": "ES",
+      "French": "FR",
+      "German": "DE",
+      "Portuguese": "PT",
+      "Russian": "RU",
+      "Italian": "IT",
+      "Vietnamese": "VI",
+    };
+    const targetLang = langMap[this.plugin.settings.translationLanguage] || this.plugin.settings.translationLanguage;
+
     const options = [
       { key: "ocr", label: "OCR (PDF to Markdown)", default: true },
-      { key: "translate", label: "Translation (EN → KO)", default: true },
+      { key: "translate", label: `Translation (EN → ${targetLang})`, default: true },
       { key: "blog", label: "Blog Generation", default: this.plugin.settings.enableBlog },
     ];
 
