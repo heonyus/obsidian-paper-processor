@@ -175,16 +175,16 @@ export class BlogGeneratorService {
       if (images.length > 0) {
         this.updateProgress("analyzing", `🖼️ Loaded ${images.length} images: ${images.slice(0, 3).map(i => i.name).join(", ")}${images.length > 3 ? "..." : ""}`, 22);
 
-        // Analyze each image individually (Deep Analysis)
+        // Analyze each image individually (Deep Analysis) with text alignment
         const client = new GeminiClient(this.settings.geminiApiKey, this.settings.blogModel);
-        const paperContext = `Title: ${metadata?.title || 'Unknown'}\n\nAbstract/Content:\n${content.slice(0, 2000)}`;
 
         for (let i = 0; i < images.length; i++) {
           const img = images[i];
           this.updateProgress("analyzing", `🔍 Deep analyzing image (${i + 1}/${images.length}): ${img.name}`, 25 + (i * 3));
 
           try {
-            const analysis = await this.analyzeImage(client, img, paperContext);
+            // Pass full content for context extraction per image
+            const analysis = await this.analyzeImage(client, img, content, metadata);
             img.analysis = analysis;
             this.updateProgress("analyzing", `✅ Analyzed: ${img.name}`, 25 + ((i + 1) * 3));
           } catch (err) {
@@ -370,8 +370,12 @@ Generate the blog post now. Output markdown only, no explanations.`;
       }
     }
 
-    // Sort by name and limit
-    imageFiles.sort((a, b) => a.name.localeCompare(b.name));
+    // Natural sort (img-1, img-2, ..., img-10 instead of img-1, img-10, img-2)
+    imageFiles.sort((a, b) => {
+      const numA = parseInt(a.name.match(/\d+/)?.[0] || "0", 10);
+      const numB = parseInt(b.name.match(/\d+/)?.[0] || "0", 10);
+      return numA - numB;
+    });
     const filesToProcess = imageFiles.slice(0, maxImages);
 
     const images: Array<ImageData & { name: string; relativePath: string; analysis?: string }> = [];
@@ -427,9 +431,62 @@ Generate the blog post now. Output markdown only, no explanations.`;
   }
 
   /**
-   * Analyze a single image using Gemini multimodal API
+   * Extract context from paper text for a specific image
+   * Finds Figure/Fig references and extracts surrounding text
    */
-  private async analyzeImage(client: GeminiClient, image: ImageData & { name: string }, paperContext: string): Promise<string> {
+  private extractImageContext(content: string, imageName: string): string {
+    // Extract number from filename (e.g., "img-1.jpeg" -> "1")
+    const numMatch = imageName.match(/(\d+)/);
+    if (!numMatch) {
+      return "";
+    }
+
+    const num = numMatch[1];
+    const patterns = [
+      new RegExp(`Figure\\s*${num}[^0-9]`, "gi"),
+      new RegExp(`Fig\\.?\\s*${num}[^0-9]`, "gi"),
+      new RegExp(`그림\\s*${num}[^0-9]`, "gi"),
+    ];
+
+    const lines = content.split("\n");
+    const relevantChunks: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      for (const pattern of patterns) {
+        if (pattern.test(line)) {
+          // Get 2 lines before and 4 lines after
+          const start = Math.max(0, i - 2);
+          const end = Math.min(lines.length, i + 5);
+          const chunk = lines.slice(start, end).join("\n").trim();
+          if (chunk && !relevantChunks.includes(chunk)) {
+            relevantChunks.push(chunk);
+          }
+          break;
+        }
+      }
+    }
+
+    if (relevantChunks.length > 0) {
+      return relevantChunks.join("\n---\n");
+    }
+
+    return "(No direct text reference found)";
+  }
+
+  /**
+   * Analyze a single image using Gemini multimodal API
+   * Uses extracted context from paper text
+   */
+  private async analyzeImage(client: GeminiClient, image: ImageData & { name: string }, fullContent: string, metadata: Record<string, string> | null): Promise<string> {
+    // Extract specific context for this image
+    const imageContext = this.extractImageContext(fullContent, image.name);
+    const titleContext = `Title: ${metadata?.title || 'Unknown'}`;
+
+    const paperContext = imageContext !== "(No direct text reference found)"
+      ? `${titleContext}\n\n## Text References to This Figure\n${imageContext}`
+      : `${titleContext}\n\nAbstract/Content:\n${fullContent.slice(0, 1500)}`;
+
     const analysisPrompt = `You are an expert at analyzing academic paper figures.
 
 Extract ALL details from this image and provide structured analysis:
@@ -444,7 +501,7 @@ Extract ALL details from this image and provide structured analysis:
 [Paragraph explaining the image comprehensively]
 
 ## Connection to Paper
-[How this supports the paper's argument]
+[How this supports the paper's argument based on the provided context]
 
 ## Technical Details
 [Numbers, dimensions, hyperparameters extracted]
