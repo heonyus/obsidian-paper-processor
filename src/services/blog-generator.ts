@@ -37,28 +37,116 @@ OBSIDIAN FORMATTING (MUST FOLLOW):
 - Use #tags inline where appropriate (e.g., "This uses #attention-mechanism and #transformer architecture")
 `;
 
+// Critical image description instructions
+const IMAGE_DESCRIPTION_INSTRUCTIONS = `
+## 이미지 해설 규칙 (매우 중요!)
+
+**모든 이미지는 반드시 15-20줄 이상의 상세한 해설 필수:**
+
+각 이미지 바로 아래에 다음 내용을 포함하여 작성:
+
+1. **전체 구조/흐름 개요** (2-3줄)
+   - 이미지가 논문의 어떤 부분을 시각화하는지
+   - 전체적인 데이터/정보의 흐름 방향
+
+2. **각 블록/컴포넌트의 상세 설명** (5-7줄)
+   - 각 박스, 화살표, 색상의 의미
+   - **논문 본문에서 언급된 정확한 표현 인용**
+   - 수학적 표기법이 있다면 LaTeX로 명시 (예: $W_Q$, $W_K$, $W_V$)
+
+3. **입력→처리→출력 단계별 설명** (3-4줄)
+   - 입력 데이터의 형태/차원 (예: "[batch, seq_len, d_model]")
+   - 중간 처리 과정의 수학적 연산
+   - 출력의 형태와 의미
+
+4. **핵심 기술적 세부사항** (3-4줄)
+   - 논문에서 언급된 하이퍼파라미터
+   - 계산 복잡도나 효율성 관련 언급
+   - 다른 방법론과의 차이점
+
+5. **수치/실험 결과** (2-3줄, 해당시)
+   - 그래프/표에서 읽을 수 있는 구체적 수치
+   - 베이스라인 대비 성능 향상 (예: "+5.2 F1", "-23% latency")
+
+**마크다운 포맷 적극 활용:**
+- 번호 매기기: \`1. 첫 번째 컴포넌트\`, \`2. 두 번째 컴포넌트\`
+- 불릿: \`- 서브 항목\`, \`* 중요 포인트\`
+- **볼드**: 중요 용어나 수치 강조 (\`**Query Encoder**\`, \`**768차원**\`)
+- 수식: 인라인 \`$...$\`, 블록 \`$$...$$\`
+
+**예시:**
+![[images/fig1.png]]
+
+그림 1은 제안된 Token Routing 아키텍처의 전체 구조를 보여준다.
+
+**1. Query Encoder (왼쪽 파란 박스)**
+- 입력 텍스트를 **768차원 임베딩**으로 변환
+- BERT-base 아키텍처 사용 (논문 Section 3.1)
+- 입력: 텍스트 쿼리 (최대 512 토큰)
+- 출력: $\\mathbf{q} \\in \\mathbb{R}^{768}$
+
+**2. Routing Module (중앙 블록)**
+- 학습 가능한 가중치 행렬 $W_q \\in \\mathbb{R}^{128 \\times 768}$
+- 라우팅 점수 계산: $\\mathbf{s} = W_q \\mathbf{q}$
+- 소프트맥스 정규화 후 상위 $k=16$개 토큰 선택
+- 논문에서 "query-conditional token selection"으로 명명
+
+**3. Retrieval Head (오른쪽 블록)**
+- 선택된 16개 토큰을 연결하여 문서 인코더와 내적
+- 점선 화살표는 역전파 경로 (end-to-end 학습)
+- 계산량 **87.5% 감소** (128→16 토큰)
+
+**실험 결과**: MS MARCO 데이터셋에서 F1 87.3 달성, 지연시간 12ms (기존 42ms 대비 71% 감소)
+`;
+
 // Blog generation prompts by style
 const BLOG_PROMPTS: Record<string, string> = {
-  technical: `You are an expert technical writer creating a detailed blog post about an academic paper for Obsidian.
+  technical: `당신은 AI/ML 논문을 해설하는 전문 테크니컬 블로그 저자입니다.
 
-STRUCTURE:
-1. **TL;DR** (3-5 bullet points in a callout box)
-2. **Introduction** (Why this paper matters)
-3. **Background** (Prerequisites for understanding, with wikilinks)
-4. **Method** (Step-by-step explanation with examples)
-5. **Key Results** (Quantitative results with interpretation)
-6. **Limitations & Future Work**
-7. **My Take** (Personal analysis and implications)
-8. **Related Concepts** (List of [[wikilinks]] to related topics)
+## 목표
+논문의 핵심을 완전히 이해하고, 독자가 논문을 읽지 않아도 핵심 내용과 의의를 파악할 수 있도록
+**깊이 있고 구체적인** 문서를 작성하세요.
 
-STYLE:
-- Write for ML practitioners, not absolute beginners
-- Include code snippets or pseudo-code where helpful
-- Use analogies to explain complex concepts
-- Reference specific figures/tables from the paper
-- Add section for "What I would try next"
-- Use Obsidian callouts for TL;DR, tips, and warnings
-${OBSIDIAN_FORMAT_INSTRUCTIONS}`,
+## 섹션 구조 (필수 순서)
+
+### 1. 문제정의 (3-5 문단)
+- 기존 시스템/방법론의 한계를 **구체적 수치/사례**로 제시
+- 왜 이 문제가 중요한지, 해결하지 못하면 어떤 실무적 문제가 발생하는지
+- 본 논문이 해결하려는 핵심 질문
+
+### 2. 관련연구 (2-4 문단)
+- 각 선행 연구의 핵심 아이디어와 **한계를 명확히 대조**
+- 본 논문과의 차별점을 구체적으로 강조
+- 표로 정리 가능하면 적극 활용
+
+### 3. 방법 (5-10 문단, 가장 중요!)
+- **입력→처리→출력 흐름**을 단계별로 분해하여 설명
+- 하위 섹션 활용: ### 3.1, ### 3.2 등
+- **모든 수식은 반드시 LaTeX + 상세 설명**:
+  - 수식 바로 아래 3-5줄로 각 변수 의미, 입출력 차원, 계산 목적 설명
+- **모든 이미지는 반드시 15-20줄 상세 해설** (아래 규칙 참조)
+
+### 4. 실험 (4-6 문단)
+- 실험 설정: 데이터셋, 베이스라인, 평가 지표, 하이퍼파라미터
+- **모든 표/그래프 상세 해설**: 비교 대상, 최고 결과, 마진, 실무적 의미
+- Ablation Study 결과와 컴포넌트별 기여도 분석
+
+### 5. 결론 (2-3 문단)
+- 핵심 기여 3-4개 항목으로 정리
+- 수치적 성과 재강조
+- 한계점 솔직하게 기술
+
+### 6. 인사이트 (2-4 문단)
+- 기술적 인사이트: 왜 이 방법이 작동하는가?
+- 실무적 함의: 어떤 시스템/서비스에 적용 가능한가?
+- 향후 연구 방향
+${IMAGE_DESCRIPTION_INSTRUCTIONS}
+${OBSIDIAN_FORMAT_INSTRUCTIONS}
+
+## 추가 규칙
+- 제공된 자료 밖의 내용 추측 금지
+- 문체: 한국어, 전문 블로그 스타일 (단정적이고 명확하게)
+- 각 섹션은 최소 200자 이상 (피상적인 요약 금지)`,
 
   summary: `You are creating a concise summary blog post about an academic paper for Obsidian.
 
@@ -96,6 +184,7 @@ STYLE:
 - Use > [!tip] callouts for "Try This" exercises
 - Explain every acronym on first use with [[wikilink]]
 - Use > [!warning] callouts for "Common Mistakes to Avoid"
+${IMAGE_DESCRIPTION_INSTRUCTIONS}
 ${OBSIDIAN_FORMAT_INSTRUCTIONS}`,
 };
 
