@@ -1,5 +1,5 @@
 import { App, TFile } from "obsidian";
-import { OpenAICompatibleClient, showError, showSuccess } from "../utils/api-client";
+import { OpenAICompatibleClient, GeminiClient, showError, showSuccess } from "../utils/api-client";
 import type { PaperProcessorSettings } from "../settings";
 
 export interface TranslationResult {
@@ -132,11 +132,12 @@ export class TranslatorService {
    * Faithful translation - page by page with context passing
    */
   private async translateFaithful(content: string, outputFolder: string): Promise<TranslationResult> {
-    const client = this.createClient();
     const pages = this.splitByPages(content);
     const translations: string[] = [];
     let previousContext = "(First page)";
     const targetLanguage = this.settings.translationLanguage || "Korean";
+    const model = this.settings.translationModel;
+    const isGemini = model.startsWith("gemini-");
 
     this.updateProgress("translating", "Starting translation...", 0, 0, pages.length);
 
@@ -152,9 +153,17 @@ export class TranslatorService {
         .replace("{previous_context}", previousContext)
         .replace("{text}", page);
 
-      const result = await client.chatCompletion([
-        { role: "user", content: prompt },
-      ], { temperature: 0.3, maxTokens: 16000 });
+      let result: { success: boolean; data?: string; error?: string };
+
+      if (isGemini) {
+        const geminiClient = new GeminiClient(this.settings.geminiApiKey, model);
+        result = await geminiClient.generateContent(prompt, { temperature: 0.3, maxOutputTokens: 16000 });
+      } else {
+        const client = this.createClient();
+        result = await client.chatCompletion([
+          { role: "user", content: prompt },
+        ], { temperature: 0.3, maxTokens: 16000 });
+      }
 
       if (!result.success || !result.data) {
         return { success: false, error: result.error || "Translation failed" };
@@ -198,13 +207,37 @@ export class TranslatorService {
   }
 
   private createClient(): OpenAICompatibleClient {
-    console.log(`[Translator] Creating client with model: ${this.settings.translationModel}`);
-    console.log(`[Translator] API key set: ${this.settings.grokApiKey ? 'Yes (' + this.settings.grokApiKey.substring(0, 10) + '...)' : 'No'}`);
-    return new OpenAICompatibleClient(
-      "https://api.x.ai/v1",
-      this.settings.grokApiKey,
-      this.settings.translationModel
-    );
+    const model = this.settings.translationModel;
+    let baseUrl: string;
+    let apiKey: string;
+
+    if (model.startsWith("grok-")) {
+      baseUrl = "https://api.x.ai/v1";
+      apiKey = this.settings.grokApiKey;
+    } else if (model.startsWith("gpt-")) {
+      baseUrl = "https://api.openai.com/v1";
+      apiKey = this.settings.openaiApiKey;
+    } else if (model.startsWith("claude-")) {
+      baseUrl = "https://api.anthropic.com/v1";
+      apiKey = this.settings.anthropicApiKey;
+    } else if (model.startsWith("gemini-")) {
+      baseUrl = "https://generativelanguage.googleapis.com/v1beta";
+      apiKey = this.settings.geminiApiKey;
+    } else if (model.startsWith("deepseek-") && !model.includes("distill")) {
+      baseUrl = "https://api.deepseek.com/v1";
+      apiKey = this.settings.deepseekApiKey;
+    } else if (model.startsWith("llama-") || model.includes("distill")) {
+      // Groq models
+      baseUrl = "https://api.groq.com/openai/v1";
+      apiKey = this.settings.groqApiKey;
+    } else {
+      // Default to Gemini
+      baseUrl = "https://generativelanguage.googleapis.com/v1beta";
+      apiKey = this.settings.geminiApiKey;
+    }
+
+    console.log(`[Translator] Model: ${model}, API: ${baseUrl}`);
+    return new OpenAICompatibleClient(baseUrl, apiKey, model);
   }
 
   private splitByPages(content: string): string[] {
