@@ -92,9 +92,16 @@ export class OCRService {
 
       this.updateProgress("saving", "Saving markdown and images...", 80);
 
+      // Fix image paths in markdown - change ![id](id) to ![id](images/id)
+      let markdown = result.data.markdown;
+      markdown = markdown.replace(
+        /!\[([^\]]*)\]\(([^/)]+\.(png|jpg|jpeg|gif|webp))\)/gi,
+        "![$1](images/$2)"
+      );
+
       // Save markdown (overwrite if exists)
       const markdownPath = `${outputFolderPath}/original.md`;
-      await this.saveFile(markdownPath, result.data.markdown);
+      await this.saveFile(markdownPath, markdown);
 
       // Save images
       const savedImages: Array<{ id: string; path: string }> = [];
@@ -105,7 +112,10 @@ export class OCRService {
         for (const img of result.data.images) {
           if (img.data && img.data.length > 0) {
             try {
-              const imgPath = `${imagesFolder}/${img.id}.png`;
+              // Use image ID as filename - if it already has extension, keep it; otherwise add .png
+              const hasExtension = /\.(png|jpg|jpeg|gif|webp)$/i.test(img.id);
+              const imgFilename = hasExtension ? img.id : `${img.id}.png`;
+              const imgPath = `${imagesFolder}/${imgFilename}`;
               const imgBuffer = this.base64ToArrayBuffer(img.data);
               // Skip empty buffers
               if (imgBuffer.byteLength > 0) {
