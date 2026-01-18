@@ -520,3 +520,38 @@
 .pp-file-item:hover {
   background: var(--background-modifier-hover);
 }
+
+/* Real-time File Buttons */
+.pp-file-buttons {
+  margin: 12px 0;
+  padding: 10px;
+  background: var(--background-primary-alt);
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.pp-file-buttons-label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.pp-file-buttons-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pp-file-buttons-row .pp-btn {
+  flex: 1;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.pp-btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--background-modifier-border);
+}

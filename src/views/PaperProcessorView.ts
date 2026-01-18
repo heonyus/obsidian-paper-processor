@@ -393,6 +393,42 @@ export class PaperProcessorView extends ItemView {
       progressFill.style.width = `${this.progressPercent}%`;
       progressBarContainer.createEl("span", { cls: "pp-progress-percent", text: `${this.progressPercent}%` });
 
+      // 🔥 Real-time file open buttons (show after OCR completes)
+      if (this.currentOutputFolder) {
+        const fileButtonsArea = progressArea.createEl("div", { cls: "pp-file-buttons" });
+        fileButtonsArea.createEl("span", { cls: "pp-file-buttons-label", text: "Open files (real-time):" });
+
+        const buttonRow = fileButtonsArea.createEl("div", { cls: "pp-file-buttons-row" });
+
+        const fileTypes = [
+          { name: "Original", path: "original.md", icon: "📄" },
+          { name: "Translation", path: "translated_raw.md", icon: "🌐" },
+          { name: "Blog", path: "blog.md", icon: "📝" },
+        ];
+
+        for (const ft of fileTypes) {
+          const filePath = `${this.currentOutputFolder}/${ft.path}`;
+          const fileExists = !!this.app.vault.getAbstractFileByPath(filePath);
+
+          const btn = buttonRow.createEl("button", {
+            cls: `pp-btn pp-btn-small ${fileExists ? "" : "pp-btn-disabled"}`,
+            text: `${ft.icon} ${ft.name}`,
+          });
+
+          if (fileExists) {
+            this.registerDomEvent(btn, "click", () => {
+              const file = this.app.vault.getAbstractFileByPath(filePath);
+              if (file instanceof TFile) {
+                this.app.workspace.getLeaf().openFile(file);
+              }
+            });
+          } else {
+            btn.disabled = true;
+            btn.title = "File not yet created";
+          }
+        }
+      }
+
       // Log area
       this.progressLogEl = progressArea.createEl("div", { cls: "pp-log-area" });
       this.processLogs.forEach((log) => {
@@ -474,6 +510,9 @@ export class PaperProcessorView extends ItemView {
     this.renderCurrentTab();
   }
 
+  // Current output folder for file link buttons
+  private currentOutputFolder: string | null = null;
+
   private async processPaper(): Promise<void> {
     if (!this.selectedPdfPath || this.isProcessing) return;
 
@@ -487,6 +526,7 @@ export class PaperProcessorView extends ItemView {
     this.processLogs = [];
     this.progressPercent = 0;
     this.currentStep = "";
+    this.currentOutputFolder = null;
     this.isProcessing = true;
     this.renderCurrentTab();
 
@@ -511,53 +551,64 @@ export class PaperProcessorView extends ItemView {
         throw new Error(`OCR failed: ${ocrResult.error}`);
       }
       this.addLog(`✅ OCR complete → ${ocrResult.outputFolder}`);
+      this.currentOutputFolder = ocrResult.outputFolder;
+      this.renderCurrentTab(); // Re-render to show file buttons
 
-      // ===== Step 2: Translation (if enabled) =====
-      if (this.processOptions.translate) {
-        this.updateProgress(35, "Step 2/3: Translation");
-        this.addLog("🌐 Starting translation...");
+      // ===== Step 2 & 3: Translation & Blog (PARALLEL) =====
+      const runTranslation = this.processOptions.translate;
+      const runBlog = this.processOptions.blog;
 
-        const translatorService = new TranslatorService(this.app, this.plugin.settings);
-        translatorService.setProgressCallback((p) => {
-          const pageInfo = p.currentPage && p.totalPages ? ` (${p.currentPage}/${p.totalPages})` : "";
-          this.addLog(`  [Trans] ${p.message}${pageInfo}`);
-          this.updateProgress(35 + p.percent * 0.35, `Step 2/3: ${p.message}${pageInfo}`);
-        });
+      if (runTranslation || runBlog) {
+        this.updateProgress(35, "Step 2-3: Translation & Blog (Parallel)");
 
-        const originalFile = this.app.vault.getAbstractFileByPath(`${ocrResult.outputFolder}/original.md`);
-        if (originalFile instanceof TFile) {
-          const translateResult = await translatorService.translate(originalFile, ocrResult.outputFolder);
-          if (!translateResult.success) {
-            this.addLog(`⚠️ Translation warning: ${translateResult.error}`);
-          } else {
-            this.addLog("✅ Translation complete → translated_raw.md");
-          }
+        const tasks: Promise<void>[] = [];
+
+        // Translation task
+        if (runTranslation) {
+          this.addLog("🌐 [Parallel] Starting translation...");
+          const translationTask = (async () => {
+            const translatorService = new TranslatorService(this.app, this.plugin.settings);
+            translatorService.setProgressCallback((p) => {
+              const pageInfo = p.currentPage && p.totalPages ? ` (${p.currentPage}/${p.totalPages})` : "";
+              this.addLog(`  [Trans] ${p.message}${pageInfo}`);
+            });
+
+            const originalFile = this.app.vault.getAbstractFileByPath(`${ocrResult.outputFolder}/original.md`);
+            if (originalFile instanceof TFile) {
+              const translateResult = await translatorService.translate(originalFile, ocrResult.outputFolder!);
+              if (!translateResult.success) {
+                this.addLog(`⚠️ Translation warning: ${translateResult.error}`);
+              } else {
+                this.addLog("✅ Translation complete → translated_raw.md");
+              }
+            }
+          })();
+          tasks.push(translationTask);
         }
-      } else {
-        this.addLog("⏭️ Translation skipped (disabled)");
-        this.updateProgress(70, "Translation skipped");
-      }
 
-      // ===== Step 3: Blog (if enabled) =====
-      if (this.processOptions.blog) {
-        this.updateProgress(70, "Step 3/3: Blog Generation");
-        this.addLog("📝 Starting blog generation...");
+        // Blog task (runs in parallel with translation)
+        if (runBlog) {
+          this.addLog("📝 [Parallel] Starting blog generation...");
+          const blogTask = (async () => {
+            const blogService = new BlogGeneratorService(this.app, this.plugin.settings);
+            blogService.setProgressCallback((p) => {
+              this.addLog(`  [Blog] ${p.message}`);
+            });
 
-        const blogService = new BlogGeneratorService(this.app, this.plugin.settings);
-        blogService.setProgressCallback((p) => {
-          this.addLog(`  [Blog] ${p.message}`);
-          this.updateProgress(70 + p.percent * 0.3, `Step 3/3: ${p.message}`);
-        });
-
-        const blogResult = await blogService.generate(ocrResult.outputFolder);
-        if (!blogResult.success) {
-          this.addLog(`⚠️ Blog warning: ${blogResult.error}`);
-        } else {
-          this.addLog("✅ Blog complete → blog.md");
+            const blogResult = await blogService.generate(ocrResult.outputFolder!);
+            if (!blogResult.success) {
+              this.addLog(`⚠️ Blog warning: ${blogResult.error}`);
+            } else {
+              this.addLog("✅ Blog complete → blog.md");
+            }
+          })();
+          tasks.push(blogTask);
         }
+
+        // Wait for all tasks to complete
+        await Promise.all(tasks);
       } else {
-        this.addLog("⏭️ Blog generation skipped (disabled)");
-        this.updateProgress(100, "Blog skipped");
+        this.addLog("⏭️ Translation & Blog skipped (disabled)");
       }
 
       // ===== Complete =====

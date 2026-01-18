@@ -158,6 +158,7 @@ export class TranslatorService {
 
   /**
    * Faithful translation - page by page with context passing
+   * Saves incrementally after each page for real-time viewing
    */
   private async translateFaithful(content: string, outputFolder: string): Promise<TranslationResult> {
     const pages = this.splitByPages(content);
@@ -166,12 +167,16 @@ export class TranslatorService {
     const targetLanguage = this.settings.translationLanguage || "Korean";
     const model = this.settings.translationModel;
     const isGemini = model.startsWith("gemini-");
+    const outputPath = `${outputFolder}/translated_raw.md`;
 
     const totalChars = content.length;
     const totalWords = content.split(/\s+/).length;
     this.updateProgress("translating", `📄 Document: ${pages.length} pages, ${totalWords.toLocaleString()} words (${(totalChars / 1024).toFixed(1)}KB)`, 0, 0, pages.length);
     this.updateProgress("translating", `🤖 Model: ${model}`, 1, 0, pages.length);
     this.updateProgress("translating", `🌐 Target Language: ${targetLanguage}`, 2, 0, pages.length);
+
+    // Create empty file first for real-time viewing
+    await this.saveFile(outputFolder, "translated_raw.md", `# 번역 진행 중...\n\n_${pages.length}개 페이지 번역 시작_\n\n---\n\n`);
 
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
@@ -230,6 +235,13 @@ export class TranslatorService {
 
       translations.push(translated);
 
+      // 🔥 REAL-TIME SAVE: Append translated page immediately
+      const currentContent = translations.join("\n\n");
+      const progressHeader = i < pages.length - 1
+        ? `<!-- 번역 진행 중: ${i + 1}/${pages.length} 페이지 완료 -->\n\n`
+        : "";
+      await this.saveFile(outputFolder, "translated_raw.md", progressHeader + currentContent);
+
       // Update context for next page (last 200 chars)
       previousContext = translated.length > 200 ? translated.slice(-200) : translated;
 
@@ -239,12 +251,12 @@ export class TranslatorService {
       }
     }
 
-    // Save translation
+    // Final save (clean version without progress header)
     const fullTranslation = translations.join("\n\n");
     const totalElapsed = ((Date.now() - startTimeTotal) / 1000).toFixed(1);
     const translatedWords = fullTranslation.split(/\s+/).length;
 
-    this.updateProgress("translating", `💾 Saving to ${outputFolder}/translated_raw.md...`, 98, pages.length, pages.length);
+    this.updateProgress("translating", `💾 Finalizing ${outputPath}...`, 98, pages.length, pages.length);
     await this.saveFile(outputFolder, "translated_raw.md", fullTranslation);
 
     this.updateProgress("complete", `✅ Translation complete!`, 100);

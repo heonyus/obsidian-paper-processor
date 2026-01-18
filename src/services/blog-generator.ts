@@ -319,12 +319,19 @@ export class BlogGeneratorService {
       this.updateProgress("generating", "📑 Parsing paper sections...", 42);
       const parsedSections = this.parseSections(content);
 
-      // 7. SEQUENTIAL SECTION GENERATION
+      // 7. SEQUENTIAL SECTION GENERATION with REAL-TIME SAVE
       this.updateProgress("generating", `🚀 Sequential generation (${SECTION_ORDER.length} sections)`, 45);
 
       const generatedSections: string[] = [];
       let accumulatedContext = "";
       const langInstruction = LANGUAGE_INSTRUCTIONS[this.settings.blogLanguage] || LANGUAGE_INSTRUCTIONS.ko;
+      const blogPath = `${paperFolder}/blog.md`;
+      const blogTitle = titleKo || title;
+      const frontmatter = this.generateFrontmatter(metadata, content);
+
+      // Create initial blog file for real-time viewing
+      const initialContent = `${frontmatter}\n\n# ${blogTitle}: 논문 해설\n\n_블로그 생성 중... (${SECTION_ORDER.length}개 섹션)_\n\n---\n\n`;
+      await this.saveFile(blogPath, initialContent);
 
       for (let i = 0; i < SECTION_ORDER.length; i++) {
         const sectionName = SECTION_ORDER[i];
@@ -364,23 +371,22 @@ export class BlogGeneratorService {
 
         generatedSections.push(sectionText);
         accumulatedContext += `\n\n${sectionText}`;
+
+        // 🔥 REAL-TIME SAVE: Update blog file after each section
+        const remainingSections = SECTION_ORDER.slice(i + 1);
+        const progressNote = remainingSections.length > 0
+          ? `\n\n---\n\n_생성 중: ${remainingSections.join(", ")} 남음..._`
+          : "";
+        const currentBlogContent = `${frontmatter}\n\n# ${blogTitle}: 논문 해설\n\n${generatedSections.join("\n\n")}${progressNote}`;
+        await this.saveFile(blogPath, currentBlogContent);
+
         this.updateProgress("generating", `✅ ${sectionName} 완료`, progressBase + 5);
       }
 
-      // 8. Combine all sections
-      this.updateProgress("saving", "🎨 Combining sections...", 95);
-      const blogTitle = titleKo || title;
-      const frontmatter = this.generateFrontmatter(metadata, content);
+      // 8. Final save (clean version without progress note)
+      this.updateProgress("saving", "🎨 Finalizing blog...", 95);
       const finalContent = `${frontmatter}\n\n# ${blogTitle}: 논문 해설\n\n${generatedSections.join("\n\n")}`;
-
-      // 9. Save
-      const blogPath = `${paperFolder}/blog.md`;
-      const existing = this.app.vault.getAbstractFileByPath(blogPath);
-      if (existing instanceof TFile) {
-        await this.app.vault.modify(existing, finalContent);
-      } else {
-        await this.app.vault.create(blogPath, finalContent);
-      }
+      await this.saveFile(blogPath, finalContent);
 
       const finalWordCount = finalContent.split(/\s+/).length;
       this.updateProgress("complete", `✅ 블로그 생성 완료! (${finalWordCount.toLocaleString()} 단어)`, 100);
@@ -765,5 +771,17 @@ generation_method: sequential
 
   private escapeYaml(str: string): string {
     return str.replace(/"/g, '\\"').replace(/\n/g, " ");
+  }
+
+  /**
+   * Save file (create or overwrite)
+   */
+  private async saveFile(path: string, content: string): Promise<void> {
+    const existing = this.app.vault.getAbstractFileByPath(path);
+    if (existing instanceof TFile) {
+      await this.app.vault.modify(existing, content);
+    } else {
+      await this.app.vault.create(path, content);
+    }
   }
 }
