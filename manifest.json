@@ -1,0 +1,10 @@
+{
+  "id": "paper-processor",
+  "name": "Paper Processor",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Academic paper processing: OCR, translation, blog generation, and slide creation with your own API keys",
+  "author": "Jaeheon Lee",
+  "authorUrl": "https://github.com/attentionmech",
+  "isDesktopOnly": true
+}

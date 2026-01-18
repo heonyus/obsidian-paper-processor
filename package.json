@@ -1,0 +1,30 @@
+{
+  "name": "obsidian-paper-processor",
+  "version": "1.0.0",
+  "description": "Obsidian plugin for academic paper processing: OCR, translation, blog generation, and slide creation",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "version": "node version-bump.mjs && git add manifest.json versions.json"
+  },
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "ocr",
+    "translation",
+    "academic",
+    "paper",
+    "research"
+  ],
+  "author": "Jaeheon Lee",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "builtin-modules": "^4.0.0",
+    "esbuild": "^0.24.0",
+    "obsidian": "latest",
+    "tslib": "^2.8.0",
+    "typescript": "^5.6.0"
+  }
+}

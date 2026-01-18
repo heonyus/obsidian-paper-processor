@@ -1,0 +1,79 @@
+/* Paper Processor Plugin Styles */
+
+/* Progress Modal */
+.progress-container {
+  margin: 1rem 0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--background-modifier-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--interactive-accent);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.progress-message {
+  margin: 1rem 0;
+  font-weight: 500;
+}
+
+.progress-message.complete {
+  color: var(--text-success);
+}
+
+.progress-message.error {
+  color: var(--text-error);
+}
+
+.progress-log {
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--background-secondary);
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin-top: 1rem;
+  font-family: var(--font-monospace);
+  font-size: 0.8em;
+}
+
+.log-item {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.log-item:last-child {
+  border-bottom: none;
+}
+
+/* Modal buttons */
+.modal-button-container {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Settings */
+.setting-item-description {
+  color: var(--text-muted);
+  font-size: 0.9em;
+  margin-bottom: 1rem;
+}
+
+/* File picker suggestions */
+.suggestion-title {
+  font-weight: 500;
+}
+
+.suggestion-note {
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
