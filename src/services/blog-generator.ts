@@ -35,7 +35,7 @@ OBSIDIAN FORMATTING (MUST FOLLOW):
 
 - Add a "Related Concepts" section at the end with wikilinks to related topics
 - Use #tags inline where appropriate (e.g., "This uses #attention-mechanism and #transformer architecture")
-- For figures, use: ![[figure-name.png]] format if referencing images
+- For figures, reference them by description (e.g., "Figure 1에서 보여주듯이...") but do NOT use image embed syntax since actual filenames are unknown
 `;
 
 // Blog generation prompts by style

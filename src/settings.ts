@@ -45,7 +45,7 @@ export const DEFAULT_SETTINGS: PaperProcessorSettings = {
 
   // Model Settings
   ocrModel: "mistral-ocr-latest",
-  translationModel: "grok-2-1212",
+  translationModel: "grok-4-1-fast-non-reasoning",
   blogModel: "gemini-3-flash-preview",
   slidesModel: "gemini-3-flash-preview",
 
@@ -162,10 +162,10 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       .setDesc("Grok model for translation (xAI)")
       .addText((text) =>
         text
-          .setPlaceholder("grok-2-1212")
+          .setPlaceholder("grok-4-1-fast-non-reasoning")
           .setValue(this.plugin.settings.translationModel)
           .onChange(async (value) => {
-            this.plugin.settings.translationModel = value || "grok-2-1212";
+            this.plugin.settings.translationModel = value || "grok-4-1-fast-non-reasoning";
             await this.plugin.saveSettings();
           })
       );
