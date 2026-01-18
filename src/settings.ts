@@ -19,17 +19,11 @@ export interface PaperProcessorSettings {
   translationModel: string;
   translationLanguage: string;
   blogModel: string;
-  slidesModel: string;
 
   // Blog Settings
   enableBlog: boolean;
   blogStyle: "technical" | "summary" | "tutorial";
   blogLanguage: "ko" | "en" | "bilingual";
-
-  // Slides Settings
-  enableSlides: boolean;
-  slideCount: number;
-  slideTemplate: "academic" | "minimal" | "modern";
 
   // arXiv Settings
   arxivDefaultCategory: string;
@@ -56,18 +50,12 @@ export const DEFAULT_SETTINGS: PaperProcessorSettings = {
   ocrModel: "mistral-ocr-latest",
   translationModel: "gemini-2.5-flash-lite",
   translationLanguage: "Korean",
-  blogModel: "gemini-3-flash-preview",
-  slidesModel: "gemini-3-flash-preview",
+  blogModel: "gemini-2.5-flash-lite",
 
   // Blog Settings
   enableBlog: true,
   blogStyle: "technical",
   blogLanguage: "ko",
-
-  // Slides Settings
-  enableSlides: true,
-  slideCount: 5,
-  slideTemplate: "academic",
 
   // arXiv Settings
   arxivDefaultCategory: "",
@@ -277,26 +265,15 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Blog Model")
-      .setDesc("Gemini model for blog generation")
-      .addText((text) =>
-        text
-          .setPlaceholder("gemini-3-flash-preview")
+      .setDesc("Model for blog generation (requires Gemini API key)")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite (Google)")
+          .addOption("gemini-3.0-flash", "Gemini 3.0 Flash (Google)")
+          .addOption("gemini-3.0-pro", "Gemini 3.0 Pro (Google)")
           .setValue(this.plugin.settings.blogModel)
           .onChange(async (value) => {
-            this.plugin.settings.blogModel = value || "gemini-3-flash-preview";
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName("Slides Model")
-      .setDesc("Gemini model for slides generation")
-      .addText((text) =>
-        text
-          .setPlaceholder("gemini-3-flash-preview")
-          .setValue(this.plugin.settings.slidesModel)
-          .onChange(async (value) => {
-            this.plugin.settings.slidesModel = value || "gemini-3-flash-preview";
+            this.plugin.settings.blogModel = value;
             await this.plugin.saveSettings();
           })
       );
@@ -342,50 +319,6 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.blogLanguage)
           .onChange(async (value: "ko" | "en" | "bilingual") => {
             this.plugin.settings.blogLanguage = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
-    // ===== Slides Settings Section =====
-    containerEl.createEl("h2", { text: "Slides Settings" });
-
-    new Setting(containerEl)
-      .setName("Enable Slides Generation")
-      .setDesc("Generate slides.html when running Full Pipeline")
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.plugin.settings.enableSlides)
-          .onChange(async (value) => {
-            this.plugin.settings.enableSlides = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName("Number of Slides")
-      .setDesc("How many slides to generate (3-10)")
-      .addSlider((slider) =>
-        slider
-          .setLimits(3, 10, 1)
-          .setValue(this.plugin.settings.slideCount)
-          .setDynamicTooltip()
-          .onChange(async (value) => {
-            this.plugin.settings.slideCount = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName("Slide Template")
-      .setDesc("Visual style for generated slides")
-      .addDropdown((dropdown) =>
-        dropdown
-          .addOption("academic", "Academic (Clean, formal)")
-          .addOption("minimal", "Minimal (Simple, less visual)")
-          .addOption("modern", "Modern (Colorful, dynamic)")
-          .setValue(this.plugin.settings.slideTemplate)
-          .onChange(async (value: "academic" | "minimal" | "modern") => {
-            this.plugin.settings.slideTemplate = value;
             await this.plugin.saveSettings();
           })
       );

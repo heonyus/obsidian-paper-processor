@@ -108,13 +108,41 @@ export class TranslatorService {
   }
 
   /**
+   * Check if the correct API key is configured for the selected model
+   */
+  private checkApiKey(model: string): string | null {
+    if (model.startsWith("grok-") && !this.settings.grokApiKey) {
+      return "xAI Grok API key not configured. Please set it in plugin settings.";
+    }
+    if (model.startsWith("gpt-") && !this.settings.openaiApiKey) {
+      return "OpenAI API key not configured. Please set it in plugin settings.";
+    }
+    if (model.startsWith("claude-") && !this.settings.anthropicApiKey) {
+      return "Anthropic API key not configured. Please set it in plugin settings.";
+    }
+    if (model.startsWith("gemini-") && !this.settings.geminiApiKey) {
+      return "Gemini API key not configured. Please set it in plugin settings.";
+    }
+    if (model.startsWith("deepseek-") && !model.includes("distill") && !this.settings.deepseekApiKey) {
+      return "DeepSeek API key not configured. Please set it in plugin settings.";
+    }
+    if ((model.startsWith("llama-") || model.includes("distill")) && !this.settings.groqApiKey) {
+      return "Groq API key not configured. Please set it in plugin settings.";
+    }
+    return null;
+  }
+
+  /**
    * Translate a paper (faithful translation only)
    */
   async translate(originalFile: TFile, outputFolder: string): Promise<TranslationResult> {
-    if (!this.settings.grokApiKey) {
+    // Check for the correct API key based on model
+    const model = this.settings.translationModel;
+    const apiKeyError = this.checkApiKey(model);
+    if (apiKeyError) {
       return {
         success: false,
-        error: "Grok API key not configured. Please set it in plugin settings.",
+        error: apiKeyError,
       };
     }
 

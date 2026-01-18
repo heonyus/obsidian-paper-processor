@@ -4,7 +4,6 @@ import { ArxivSearchService, ArxivPaper, ARXIV_CATEGORIES } from "../services/ar
 import { OCRService } from "../services/ocr";
 import { TranslatorService } from "../services/translator";
 import { BlogGeneratorService } from "../services/blog-generator";
-import { SlidesGeneratorService } from "../services/slides-generator";
 
 export const VIEW_TYPE_PAPER_PROCESSOR = "paper-processor-view";
 
@@ -28,7 +27,6 @@ export class PaperProcessorView extends ItemView {
     ocr: true,
     translate: true,
     blog: false,
-    slides: false,
   };
   private isProcessing = false;
   private processLogs: string[] = [];
@@ -42,7 +40,6 @@ export class PaperProcessorView extends ItemView {
     this.arxivService = new ArxivSearchService();
     this.currentTab = plugin.settings.sidebarDefaultTab || "search";
     this.processOptions.blog = plugin.settings.enableBlog;
-    this.processOptions.slides = plugin.settings.enableSlides;
   }
 
   getViewType(): string {
@@ -329,7 +326,6 @@ export class PaperProcessorView extends ItemView {
       { key: "ocr", label: "OCR (PDF to Markdown)", default: true },
       { key: "translate", label: "Translation (EN → KO)", default: true },
       { key: "blog", label: "Blog Generation", default: this.plugin.settings.enableBlog },
-      { key: "slides", label: "Slides Generation", default: this.plugin.settings.enableSlides },
     ];
 
     options.forEach((opt) => {
@@ -484,13 +480,13 @@ export class PaperProcessorView extends ItemView {
 
     try {
       // ===== Step 1: OCR =====
-      this.updateProgress(5, "Step 1/4: OCR Processing");
+      this.updateProgress(5, "Step 1/3: OCR Processing");
       this.addLog("📄 Starting OCR...");
 
       const ocrService = new OCRService(this.app, this.plugin.settings);
       ocrService.setProgressCallback((p) => {
         this.addLog(`  [OCR] ${p.message}`);
-        this.updateProgress(5 + p.percent * 0.2, `Step 1/4: ${p.message}`);
+        this.updateProgress(5 + p.percent * 0.3, `Step 1/3: ${p.message}`);
       });
 
       const ocrResult = await ocrService.processPDF(pdfFile);
@@ -503,14 +499,14 @@ export class PaperProcessorView extends ItemView {
 
       // ===== Step 2: Translation (if enabled) =====
       if (this.processOptions.translate) {
-        this.updateProgress(30, "Step 2/4: Translation");
+        this.updateProgress(35, "Step 2/3: Translation");
         this.addLog("🌐 Starting translation...");
 
         const translatorService = new TranslatorService(this.app, this.plugin.settings);
         translatorService.setProgressCallback((p) => {
           const pageInfo = p.currentPage && p.totalPages ? ` (${p.currentPage}/${p.totalPages})` : "";
           this.addLog(`  [Trans] ${p.message}${pageInfo}`);
-          this.updateProgress(30 + p.percent * 0.3, `Step 2/4: ${p.message}${pageInfo}`);
+          this.updateProgress(35 + p.percent * 0.35, `Step 2/3: ${p.message}${pageInfo}`);
         });
 
         const originalFile = this.app.vault.getAbstractFileByPath(`${ocrResult.outputFolder}/original.md`);
@@ -524,18 +520,18 @@ export class PaperProcessorView extends ItemView {
         }
       } else {
         this.addLog("⏭️ Translation skipped (disabled)");
-        this.updateProgress(60, "Translation skipped");
+        this.updateProgress(70, "Translation skipped");
       }
 
       // ===== Step 3: Blog (if enabled) =====
       if (this.processOptions.blog) {
-        this.updateProgress(65, "Step 3/4: Blog Generation");
+        this.updateProgress(70, "Step 3/3: Blog Generation");
         this.addLog("📝 Starting blog generation...");
 
         const blogService = new BlogGeneratorService(this.app, this.plugin.settings);
         blogService.setProgressCallback((p) => {
           this.addLog(`  [Blog] ${p.message}`);
-          this.updateProgress(65 + p.percent * 0.15, `Step 3/4: ${p.message}`);
+          this.updateProgress(70 + p.percent * 0.3, `Step 3/3: ${p.message}`);
         });
 
         const blogResult = await blogService.generate(ocrResult.outputFolder);
@@ -546,29 +542,7 @@ export class PaperProcessorView extends ItemView {
         }
       } else {
         this.addLog("⏭️ Blog generation skipped (disabled)");
-        this.updateProgress(80, "Blog skipped");
-      }
-
-      // ===== Step 4: Slides (if enabled) =====
-      if (this.processOptions.slides) {
-        this.updateProgress(85, "Step 4/4: Slides Generation");
-        this.addLog("🎨 Starting slides generation...");
-
-        const slidesService = new SlidesGeneratorService(this.app, this.plugin.settings);
-        slidesService.setProgressCallback((p) => {
-          this.addLog(`  [Slides] ${p.message}`);
-          this.updateProgress(85 + p.percent * 0.15, `Step 4/4: ${p.message}`);
-        });
-
-        const slidesResult = await slidesService.generate(ocrResult.outputFolder);
-        if (!slidesResult.success) {
-          this.addLog(`⚠️ Slides warning: ${slidesResult.error}`);
-        } else {
-          this.addLog("✅ Slides complete → slides.html");
-        }
-      } else {
-        this.addLog("⏭️ Slides generation skipped (disabled)");
-        this.updateProgress(100, "Slides skipped");
+        this.updateProgress(100, "Blog skipped");
       }
 
       // ===== Complete =====
@@ -655,7 +629,6 @@ export class PaperProcessorView extends ItemView {
       original: !!this.app.vault.getAbstractFileByPath(`${folder.path}/original.md`),
       translated: !!this.app.vault.getAbstractFileByPath(`${folder.path}/translated_raw.md`),
       blog: !!this.app.vault.getAbstractFileByPath(`${folder.path}/blog.md`),
-      slides: !!this.app.vault.getAbstractFileByPath(`${folder.path}/slides.html`),
     };
 
     // Status badges
@@ -671,10 +644,6 @@ export class PaperProcessorView extends ItemView {
     statusRow.createEl("span", {
       cls: `pp-status-badge ${files.blog ? "success" : ""}`,
       text: "Blog",
-    });
-    statusRow.createEl("span", {
-      cls: `pp-status-badge ${files.slides ? "success" : ""}`,
-      text: "Slides",
     });
 
     // Actions

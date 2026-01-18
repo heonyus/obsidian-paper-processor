@@ -1,4 +1,4 @@
-import { App, TFile } from "obsidian";
+import { App, TFile, TFolder } from "obsidian";
 import { GeminiClient, showError, showSuccess } from "../utils/api-client";
 import type { PaperProcessorSettings } from "../settings";
 import { arxivCategoriesToTags, extractTopicTags, addWikilinks } from "../utils/obsidian-format";
@@ -35,7 +35,6 @@ OBSIDIAN FORMATTING (MUST FOLLOW):
 
 - Add a "Related Concepts" section at the end with wikilinks to related topics
 - Use #tags inline where appropriate (e.g., "This uses #attention-mechanism and #transformer architecture")
-- For figures, reference them by description (e.g., "Figure 1에서 보여주듯이...") but do NOT use image embed syntax since actual filenames are unknown
 `;
 
 // Blog generation prompts by style
@@ -158,15 +157,24 @@ export class BlogGeneratorService {
       // Read metadata if available
       const metadata = await this.getMetadata(paperFolder);
 
+      // Get available images
+      const images = await this.getAvailableImages(paperFolder);
+
       this.updateProgress("generating", "Generating blog post...", 30);
 
       // Build prompt
       const stylePrompt = BLOG_PROMPTS[this.settings.blogStyle] || BLOG_PROMPTS.technical;
       const langInstruction = LANGUAGE_INSTRUCTIONS[this.settings.blogLanguage] || LANGUAGE_INSTRUCTIONS.ko;
 
+      // Image instruction
+      const imageInstruction = images.length > 0
+        ? `\n\nAVAILABLE IMAGES (use these in your blog post with Obsidian embed syntax ![[images/filename]]):\n${images.map((img: string) => `- images/${img}`).join("\n")}\n\nIMPORTANT: You MUST include relevant images from the list above in appropriate sections of the blog post. Use the Obsidian image embed syntax: ![[images/filename.png]]\nFor example: ![[images/${images[0]}]]\nInclude at least 2-3 key figures that illustrate the main concepts.`
+        : "";
+
       const fullPrompt = `${stylePrompt}
 
 ${langInstruction}
+${imageInstruction}
 
 ---
 PAPER TITLE: ${metadata?.title || "Unknown"}
@@ -263,6 +271,26 @@ Generate the blog post now. Output markdown only, no explanations.`;
     }
 
     return null;
+  }
+
+  /**
+   * Get list of available images in the paper folder
+   */
+  private async getAvailableImages(folder: string): Promise<string[]> {
+    const imagesFolder = this.app.vault.getAbstractFileByPath(`${folder}/images`);
+
+    if (!(imagesFolder instanceof TFolder)) {
+      return [];
+    }
+
+    const imageFiles: string[] = [];
+    for (const child of imagesFolder.children) {
+      if (child instanceof TFile && /\.(png|jpg|jpeg|gif|webp)$/i.test(child.name)) {
+        imageFiles.push(child.name);
+      }
+    }
+
+    return imageFiles;
   }
 
   /**

@@ -3,7 +3,6 @@ import { PaperProcessorSettings, DEFAULT_SETTINGS, PaperProcessorSettingTab } fr
 import { OCRService } from "./services/ocr";
 import { TranslatorService } from "./services/translator";
 import { BlogGeneratorService } from "./services/blog-generator";
-import { SlidesGeneratorService } from "./services/slides-generator";
 import { ProgressModal } from "./ui/progress-modal";
 import { PDFPickerModal, PaperFolderPickerModal, MarkdownPickerModal } from "./ui/file-picker-modal";
 import { PaperProcessorView, VIEW_TYPE_PAPER_PROCESSOR } from "./views/PaperProcessorView";
@@ -59,17 +58,10 @@ export default class PaperProcessorPlugin extends Plugin {
       callback: () => this.runBlogGeneration(),
     });
 
-    // ===== Slides Generation Commands =====
-    this.addCommand({
-      id: "generate-slides",
-      name: "Slides: Generate presentation slides",
-      callback: () => this.runSlidesGeneration(),
-    });
-
     // ===== Full Pipeline Command =====
     this.addCommand({
       id: "full-pipeline",
-      name: "Full Pipeline: OCR → Translate → Blog → Slides",
+      name: "Full Pipeline: OCR → Translate → Blog",
       callback: () => this.runFullPipeline(),
     });
 
@@ -245,45 +237,13 @@ export default class PaperProcessorPlugin extends Plugin {
     }
   }
 
-  // ===== Slides Generation =====
-
-  private async runSlidesGeneration() {
-    if (!this.settings.geminiApiKey) {
-      new Notice("Please configure Gemini API key in settings first");
-      return;
-    }
-
-    new PaperFolderPickerModal(this.app, this.settings.outputFolder, (folder) => {
-      this.generateSlides(folder);
-    }).open();
-  }
-
-  private async generateSlides(folder: string) {
-    const progress = new ProgressModal(this.app, "Slides Generation");
-    progress.open();
-
-    const service = new SlidesGeneratorService(this.app, this.settings);
-    service.setProgressCallback((p) => {
-      progress.setProgress(p.percent, p.message);
-    });
-
-    const result = await service.generate(folder);
-
-    if (result.success) {
-      progress.complete(`Slides created: ${result.htmlPath}`);
-    } else {
-      progress.error(result.error || "Unknown error");
-    }
-  }
-
   // ===== Full Pipeline =====
 
   private async runFullPipeline() {
     // Check all API keys
     const missingKeys: string[] = [];
     if (!this.settings.mistralApiKey) missingKeys.push("Mistral (OCR)");
-    if (!this.settings.grokApiKey) missingKeys.push("Grok (Translation)");
-    if (!this.settings.geminiApiKey) missingKeys.push("Gemini (Blog/Slides)");
+    if (!this.settings.geminiApiKey) missingKeys.push("Gemini (Translation/Blog)");
 
     if (missingKeys.length > 0) {
       new Notice(`Missing API keys: ${missingKeys.join(", ")}. Please configure in settings.`);
@@ -296,10 +256,10 @@ export default class PaperProcessorPlugin extends Plugin {
 
       try {
         // Step 1: OCR
-        progress.updateTitle("Step 1/4: OCR");
+        progress.updateTitle("Step 1/3: OCR");
         const ocrService = new OCRService(this.app, this.settings);
         ocrService.setProgressCallback((p) => {
-          progress.setProgress(p.percent * 0.25, `[OCR] ${p.message}`);
+          progress.setProgress(p.percent * 0.33, `[OCR] ${p.message}`);
         });
 
         const ocrResult = await ocrService.processPDF(file);
@@ -309,10 +269,10 @@ export default class PaperProcessorPlugin extends Plugin {
         }
 
         // Step 2: Translation
-        progress.updateTitle("Step 2/4: Translation");
+        progress.updateTitle("Step 2/3: Translation");
         const translatorService = new TranslatorService(this.app, this.settings);
         translatorService.setProgressCallback((p) => {
-          progress.setProgress(25 + p.percent * 0.25, `[Translation] ${p.message}`);
+          progress.setProgress(33 + p.percent * 0.33, `[Translation] ${p.message}`);
         });
 
         const originalFile = this.app.vault.getAbstractFileByPath(`${ocrResult.outputFolder}/original.md`);
@@ -329,10 +289,10 @@ export default class PaperProcessorPlugin extends Plugin {
 
         // Step 3: Blog Generation (conditional)
         if (this.settings.enableBlog) {
-          progress.updateTitle("Step 3/4: Blog Generation");
+          progress.updateTitle("Step 3/3: Blog Generation");
           const blogService = new BlogGeneratorService(this.app, this.settings);
           blogService.setProgressCallback((p) => {
-            progress.setProgress(50 + p.percent * 0.25, `[Blog] ${p.message}`);
+            progress.setProgress(66 + p.percent * 0.34, `[Blog] ${p.message}`);
           });
 
           const blogResult = await blogService.generate(ocrResult.outputFolder);
@@ -341,24 +301,7 @@ export default class PaperProcessorPlugin extends Plugin {
           }
         } else {
           progress.addLog("Blog generation skipped (disabled in settings)");
-          progress.setProgress(75, "Blog generation skipped");
-        }
-
-        // Step 4: Slides Generation (conditional)
-        if (this.settings.enableSlides) {
-          progress.updateTitle("Step 4/4: Slides Generation");
-          const slidesService = new SlidesGeneratorService(this.app, this.settings);
-          slidesService.setProgressCallback((p) => {
-            progress.setProgress(75 + p.percent * 0.25, `[Slides] ${p.message}`);
-          });
-
-          const slidesResult = await slidesService.generate(ocrResult.outputFolder);
-          if (!slidesResult.success) {
-            progress.addLog(`Slides generation warning: ${slidesResult.error}`);
-          }
-        } else {
-          progress.addLog("Slides generation skipped (disabled in settings)");
-          progress.setProgress(100, "Slides generation skipped");
+          progress.setProgress(100, "Blog generation skipped");
         }
 
         progress.complete(`Full pipeline complete!\nOutput: ${ocrResult.outputFolder}`);
