@@ -54,7 +54,7 @@ export const DEFAULT_SETTINGS: PaperProcessorSettings = {
 
   // Model Settings
   ocrModel: "mistral-ocr-latest",
-  translationModel: "gemini-2.5-flash-lite-preview-05-20",
+  translationModel: "gemini-2.5-flash-lite",
   translationLanguage: "Korean",
   blogModel: "gemini-3-flash-preview",
   slidesModel: "gemini-3-flash-preview",
@@ -239,7 +239,7 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           // Google Gemini models
           .addOption("gemini-3.0-pro", "Gemini 3.0 Pro (Google)")
           .addOption("gemini-3.0-flash", "Gemini 3.0 Flash (Google)")
-          .addOption("gemini-2.5-flash-lite-preview-05-20", "Gemini 2.5 Flash-Lite (Google)")
+          .addOption("gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite (Google)")
           // DeepSeek models
           .addOption("deepseek-r1", "DeepSeek R1 (DeepSeek)")
           .addOption("deepseek-v3", "DeepSeek V3 (DeepSeek)")
