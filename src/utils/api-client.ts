@@ -202,9 +202,11 @@ export class GeminiClient {
 export class MistralOCRClient {
   private apiKey: string;
   private baseUrl = "https://api.mistral.ai/v1";
+  private model: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, model = "mistral-ocr-latest") {
     this.apiKey = apiKey;
+    this.model = model;
   }
 
   /**
@@ -239,7 +241,7 @@ export class MistralOCRClient {
           Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          model: "mistral-ocr-latest",
+          model: this.model,
           document: {
             type: "document_url",
             document_url: `data:application/pdf;base64,${base64Pdf}`,

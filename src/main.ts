@@ -1,4 +1,4 @@
-import { Plugin, TFile, Notice } from "obsidian";
+import { Plugin, TFile, Notice, WorkspaceLeaf } from "obsidian";
 import { PaperProcessorSettings, DEFAULT_SETTINGS, PaperProcessorSettingTab } from "./settings";
 import { OCRService } from "./services/ocr";
 import { TranslatorService } from "./services/translator";
@@ -6,6 +6,7 @@ import { BlogGeneratorService } from "./services/blog-generator";
 import { SlidesGeneratorService } from "./services/slides-generator";
 import { ProgressModal } from "./ui/progress-modal";
 import { PDFPickerModal, PaperFolderPickerModal, MarkdownPickerModal } from "./ui/file-picker-modal";
+import { PaperProcessorView, VIEW_TYPE_PAPER_PROCESSOR } from "./views/PaperProcessorView";
 
 export default class PaperProcessorPlugin extends Plugin {
   settings: PaperProcessorSettings;
@@ -15,6 +16,12 @@ export default class PaperProcessorPlugin extends Plugin {
 
     // Add settings tab
     this.addSettingTab(new PaperProcessorSettingTab(this.app, this));
+
+    // Register sidebar view
+    this.registerView(
+      VIEW_TYPE_PAPER_PROCESSOR,
+      (leaf: WorkspaceLeaf) => new PaperProcessorView(leaf, this)
+    );
 
     // ===== OCR Command =====
     this.addCommand({
@@ -66,9 +73,16 @@ export default class PaperProcessorPlugin extends Plugin {
       callback: () => this.runFullPipeline(),
     });
 
-    // Add ribbon icon
+    // ===== Sidebar Command =====
+    this.addCommand({
+      id: "open-sidebar",
+      name: "Open Paper Processor Sidebar",
+      callback: () => this.activateSidebar(),
+    });
+
+    // Add ribbon icon - opens sidebar
     this.addRibbonIcon("file-text", "Paper Processor", () => {
-      new Notice("Paper Processor: Use Command Palette (Ctrl+P) for commands");
+      this.activateSidebar();
     });
 
     // Register context menu for PDF files
@@ -98,7 +112,26 @@ export default class PaperProcessorPlugin extends Plugin {
   }
 
   onunload() {
+    // Detach sidebar view
+    this.app.workspace.detachLeavesOfType(VIEW_TYPE_PAPER_PROCESSOR);
     console.log("Paper Processor plugin unloaded");
+  }
+
+  // ===== Sidebar =====
+
+  async activateSidebar() {
+    // Remove existing views
+    this.app.workspace.detachLeavesOfType(VIEW_TYPE_PAPER_PROCESSOR);
+
+    // Open in right sidebar
+    const rightLeaf = await this.app.workspace.getRightLeaf(false);
+    if (rightLeaf) {
+      await rightLeaf.setViewState({
+        type: VIEW_TYPE_PAPER_PROCESSOR,
+        active: true,
+      });
+      this.app.workspace.revealLeaf(rightLeaf);
+    }
   }
 
   async loadSettings() {
@@ -294,28 +327,38 @@ export default class PaperProcessorPlugin extends Plugin {
           return;
         }
 
-        // Step 3: Blog Generation
-        progress.updateTitle("Step 3/4: Blog Generation");
-        const blogService = new BlogGeneratorService(this.app, this.settings);
-        blogService.setProgressCallback((p) => {
-          progress.setProgress(50 + p.percent * 0.25, `[Blog] ${p.message}`);
-        });
+        // Step 3: Blog Generation (conditional)
+        if (this.settings.enableBlog) {
+          progress.updateTitle("Step 3/4: Blog Generation");
+          const blogService = new BlogGeneratorService(this.app, this.settings);
+          blogService.setProgressCallback((p) => {
+            progress.setProgress(50 + p.percent * 0.25, `[Blog] ${p.message}`);
+          });
 
-        const blogResult = await blogService.generate(ocrResult.outputFolder);
-        if (!blogResult.success) {
-          progress.addLog(`Blog generation warning: ${blogResult.error}`);
+          const blogResult = await blogService.generate(ocrResult.outputFolder);
+          if (!blogResult.success) {
+            progress.addLog(`Blog generation warning: ${blogResult.error}`);
+          }
+        } else {
+          progress.addLog("Blog generation skipped (disabled in settings)");
+          progress.setProgress(75, "Blog generation skipped");
         }
 
-        // Step 4: Slides Generation
-        progress.updateTitle("Step 4/4: Slides Generation");
-        const slidesService = new SlidesGeneratorService(this.app, this.settings);
-        slidesService.setProgressCallback((p) => {
-          progress.setProgress(75 + p.percent * 0.25, `[Slides] ${p.message}`);
-        });
+        // Step 4: Slides Generation (conditional)
+        if (this.settings.enableSlides) {
+          progress.updateTitle("Step 4/4: Slides Generation");
+          const slidesService = new SlidesGeneratorService(this.app, this.settings);
+          slidesService.setProgressCallback((p) => {
+            progress.setProgress(75 + p.percent * 0.25, `[Slides] ${p.message}`);
+          });
 
-        const slidesResult = await slidesService.generate(ocrResult.outputFolder);
-        if (!slidesResult.success) {
-          progress.addLog(`Slides generation warning: ${slidesResult.error}`);
+          const slidesResult = await slidesService.generate(ocrResult.outputFolder);
+          if (!slidesResult.success) {
+            progress.addLog(`Slides generation warning: ${slidesResult.error}`);
+          }
+        } else {
+          progress.addLog("Slides generation skipped (disabled in settings)");
+          progress.setProgress(100, "Slides generation skipped");
         }
 
         progress.complete(`Full pipeline complete!\nOutput: ${ocrResult.outputFolder}`);

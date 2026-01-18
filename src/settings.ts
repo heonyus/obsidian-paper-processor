@@ -10,17 +10,28 @@ export interface PaperProcessorSettings {
   // General Settings
   outputFolder: string;
 
-  // Translation Settings
-  translationMode: "faithful-only" | "full-pipeline";
+  // Model Settings
+  ocrModel: string;
   translationModel: string;
+  blogModel: string;
+  slidesModel: string;
+
+  // Blog Settings
+  enableBlog: boolean;
+  blogStyle: "technical" | "summary" | "tutorial";
+  blogLanguage: "ko" | "en" | "bilingual";
 
   // Slides Settings
+  enableSlides: boolean;
   slideCount: number;
   slideTemplate: "academic" | "minimal" | "modern";
 
-  // Blog Settings
-  blogStyle: "technical" | "summary" | "tutorial";
-  blogLanguage: "ko" | "en" | "bilingual";
+  // arXiv Settings
+  arxivDefaultCategory: string;
+  arxivMaxResults: number;
+
+  // Sidebar Settings
+  sidebarDefaultTab: "search" | "process" | "papers";
 }
 
 export const DEFAULT_SETTINGS: PaperProcessorSettings = {
@@ -32,17 +43,28 @@ export const DEFAULT_SETTINGS: PaperProcessorSettings = {
   // General Settings
   outputFolder: "papers",
 
-  // Translation Settings
-  translationMode: "full-pipeline",
-  translationModel: "grok-3-fast",
+  // Model Settings
+  ocrModel: "mistral-ocr-latest",
+  translationModel: "grok-4-1-fast-non-reasoning",
+  blogModel: "gemini-3-flash-preview",
+  slidesModel: "gemini-3-flash-preview",
+
+  // Blog Settings
+  enableBlog: true,
+  blogStyle: "technical",
+  blogLanguage: "ko",
 
   // Slides Settings
+  enableSlides: true,
   slideCount: 5,
   slideTemplate: "academic",
 
-  // Blog Settings
-  blogStyle: "technical",
-  blogLanguage: "ko",
+  // arXiv Settings
+  arxivDefaultCategory: "",
+  arxivMaxResults: 10,
+
+  // Sidebar Settings
+  sidebarDefaultTab: "search",
 };
 
 export class PaperProcessorSettingTab extends PluginSettingTab {
@@ -119,40 +141,120 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           })
       );
 
-    // ===== Translation Settings Section =====
-    containerEl.createEl("h2", { text: "Translation Settings" });
+    // ===== Model Settings Section =====
+    containerEl.createEl("h2", { text: "Model Settings" });
 
     new Setting(containerEl)
-      .setName("Translation Mode")
-      .setDesc("faithful-only: Direct translation | full-pipeline: 3-phase (faithful → readable → structured)")
-      .addDropdown((dropdown) =>
-        dropdown
-          .addOption("faithful-only", "Faithful Only (Fast)")
-          .addOption("full-pipeline", "Full Pipeline (Best Quality)")
-          .setValue(this.plugin.settings.translationMode)
-          .onChange(async (value: "faithful-only" | "full-pipeline") => {
-            this.plugin.settings.translationMode = value;
+      .setName("OCR Model")
+      .setDesc("Mistral model for OCR processing")
+      .addText((text) =>
+        text
+          .setPlaceholder("mistral-ocr-latest")
+          .setValue(this.plugin.settings.ocrModel)
+          .onChange(async (value) => {
+            this.plugin.settings.ocrModel = value || "mistral-ocr-latest";
             await this.plugin.saveSettings();
           })
       );
 
     new Setting(containerEl)
       .setName("Translation Model")
-      .setDesc("Grok model to use for translation")
-      .addDropdown((dropdown) =>
-        dropdown
-          .addOption("grok-3-fast", "Grok 3 Fast")
-          .addOption("grok-3", "Grok 3")
-          .addOption("grok-2", "Grok 2")
+      .setDesc("Grok model for translation (xAI)")
+      .addText((text) =>
+        text
+          .setPlaceholder("grok-4-1-fast-non-reasoning")
           .setValue(this.plugin.settings.translationModel)
           .onChange(async (value) => {
-            this.plugin.settings.translationModel = value;
+            this.plugin.settings.translationModel = value || "grok-4-1-fast-non-reasoning";
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Blog Model")
+      .setDesc("Gemini model for blog generation")
+      .addText((text) =>
+        text
+          .setPlaceholder("gemini-3-flash-preview")
+          .setValue(this.plugin.settings.blogModel)
+          .onChange(async (value) => {
+            this.plugin.settings.blogModel = value || "gemini-3-flash-preview";
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Slides Model")
+      .setDesc("Gemini model for slides generation")
+      .addText((text) =>
+        text
+          .setPlaceholder("gemini-3-flash-preview")
+          .setValue(this.plugin.settings.slidesModel)
+          .onChange(async (value) => {
+            this.plugin.settings.slidesModel = value || "gemini-3-flash-preview";
+            await this.plugin.saveSettings();
+          })
+      );
+
+    // ===== Blog Settings Section =====
+    containerEl.createEl("h2", { text: "Blog Settings" });
+
+    new Setting(containerEl)
+      .setName("Enable Blog Generation")
+      .setDesc("Generate blog.md when running Full Pipeline")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.enableBlog)
+          .onChange(async (value) => {
+            this.plugin.settings.enableBlog = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Blog Style")
+      .setDesc("Writing style for generated blog posts")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("technical", "Technical (Detailed, academic)")
+          .addOption("summary", "Summary (Concise overview)")
+          .addOption("tutorial", "Tutorial (Step-by-step explanation)")
+          .setValue(this.plugin.settings.blogStyle)
+          .onChange(async (value: "technical" | "summary" | "tutorial") => {
+            this.plugin.settings.blogStyle = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Blog Language")
+      .setDesc("Language for generated blog posts")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("ko", "Korean (한국어)")
+          .addOption("en", "English")
+          .addOption("bilingual", "Bilingual (Both)")
+          .setValue(this.plugin.settings.blogLanguage)
+          .onChange(async (value: "ko" | "en" | "bilingual") => {
+            this.plugin.settings.blogLanguage = value;
             await this.plugin.saveSettings();
           })
       );
 
     // ===== Slides Settings Section =====
     containerEl.createEl("h2", { text: "Slides Settings" });
+
+    new Setting(containerEl)
+      .setName("Enable Slides Generation")
+      .setDesc("Generate slides.html when running Full Pipeline")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.enableSlides)
+          .onChange(async (value) => {
+            this.plugin.settings.enableSlides = value;
+            await this.plugin.saveSettings();
+          })
+      );
 
     new Setting(containerEl)
       .setName("Number of Slides")
@@ -183,35 +285,56 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           })
       );
 
-    // ===== Blog Settings Section =====
-    containerEl.createEl("h2", { text: "Blog Settings" });
+    // ===== arXiv Settings Section =====
+    containerEl.createEl("h2", { text: "arXiv Settings" });
 
     new Setting(containerEl)
-      .setName("Blog Style")
-      .setDesc("Writing style for generated blog posts")
+      .setName("Default Category")
+      .setDesc("Default arXiv category filter for searches")
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("technical", "Technical (Detailed, academic)")
-          .addOption("summary", "Summary (Concise overview)")
-          .addOption("tutorial", "Tutorial (Step-by-step explanation)")
-          .setValue(this.plugin.settings.blogStyle)
-          .onChange(async (value: "technical" | "summary" | "tutorial") => {
-            this.plugin.settings.blogStyle = value;
+          .addOption("", "All Categories")
+          .addOption("cs.AI", "Artificial Intelligence")
+          .addOption("cs.CL", "Computation and Language (NLP)")
+          .addOption("cs.CV", "Computer Vision")
+          .addOption("cs.LG", "Machine Learning")
+          .addOption("cs.IR", "Information Retrieval")
+          .addOption("stat.ML", "Statistics - Machine Learning")
+          .setValue(this.plugin.settings.arxivDefaultCategory)
+          .onChange(async (value) => {
+            this.plugin.settings.arxivDefaultCategory = value;
             await this.plugin.saveSettings();
           })
       );
 
     new Setting(containerEl)
-      .setName("Blog Language")
-      .setDesc("Language for generated blog posts")
+      .setName("Max Results")
+      .setDesc("Maximum number of search results to display (5-50)")
+      .addSlider((slider) =>
+        slider
+          .setLimits(5, 50, 5)
+          .setValue(this.plugin.settings.arxivMaxResults)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.arxivMaxResults = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    // ===== Sidebar Settings Section =====
+    containerEl.createEl("h2", { text: "Sidebar Settings" });
+
+    new Setting(containerEl)
+      .setName("Default Tab")
+      .setDesc("Which tab to show when opening the sidebar")
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("ko", "Korean (한국어)")
-          .addOption("en", "English")
-          .addOption("bilingual", "Bilingual (Both)")
-          .setValue(this.plugin.settings.blogLanguage)
-          .onChange(async (value: "ko" | "en" | "bilingual") => {
-            this.plugin.settings.blogLanguage = value;
+          .addOption("search", "Search (arXiv)")
+          .addOption("process", "Process (PDF)")
+          .addOption("papers", "Papers (Library)")
+          .setValue(this.plugin.settings.sidebarDefaultTab)
+          .onChange(async (value: "search" | "process" | "papers") => {
+            this.plugin.settings.sidebarDefaultTab = value;
             await this.plugin.saveSettings();
           })
       );

@@ -352,7 +352,7 @@ ${content.substring(0, 15000)} ${content.length > 15000 ? "... [truncated]" : ""
 Generate the slide data now.`;
 
       // Call Gemini
-      const client = new GeminiClient(this.settings.geminiApiKey, "gemini-2.0-flash");
+      const client = new GeminiClient(this.settings.geminiApiKey, this.settings.slidesModel);
       const result = await client.generateContent(prompt, {
         temperature: 0.7,
         maxOutputTokens: 4096,
