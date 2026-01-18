@@ -37,66 +37,146 @@ OBSIDIAN FORMATTING (MUST FOLLOW):
 - Use #tags inline where appropriate (e.g., "This uses #attention-mechanism and #transformer architecture")
 `;
 
+// Markdown formatting rules - CRITICAL
+const MARKDOWN_FORMATTING_RULES = `
+## 마크다운 포맷팅 규칙 (필수 준수!)
+
+**1. 불릿 포인트 적극 활용 (MUST)**
+모든 섹션에서 불릿 포인트를 적극적으로 사용하세요:
+
+- 3개 이상 나열되는 항목은 반드시 불릿으로
+- 단계별 설명은 번호 매기기 (1., 2., 3.)
+- 하위 항목은 들여쓰기 불릿 (  - 또는   *)
+- 대조/비교는 불릿으로 병렬 구조
+
+**2. 계층 구조 표현**
+\`\`\`markdown
+- **상위 개념**
+  - 하위 설명 1
+  - 하위 설명 2
+    - 세부 사항 a
+    - 세부 사항 b
+\`\`\`
+
+**3. 볼드/이탤릭 사용**
+- **핵심 용어**, **수치**, **모델명**은 반드시 볼드
+- *강조하고 싶은 부연 설명*은 이탤릭
+- \`코드\`, \`하이퍼파라미터명\`, \`데이터셋명\`은 인라인 코드
+
+**4. 수식 표현**
+- 인라인 수식: $x = W_q \\cdot h$
+- 블록 수식 (중요 수식):
+$$
+\\mathcal{L} = \\sum_{i=1}^{N} -\\log p(y_i | x_i)
+$$
+
+**5. 표 사용 (비교/실험 결과)**
+| Method | F1 | Latency |
+|--------|-----|---------|
+| Baseline | 82.3 | 45ms |
+| **Ours** | **87.3** | **12ms** |
+
+**6. 콜아웃 박스**
+> [!note] 핵심 포인트
+> 이 방법의 핵심은 query-conditional selection이다.
+
+> [!tip] 실무 적용
+> 대규모 검색 시스템에 적용 시 지연시간 71% 감소 기대.
+`;
+
 // Critical image description instructions
 const IMAGE_DESCRIPTION_INSTRUCTIONS = `
-## 이미지 해설 규칙 (매우 중요!)
+## 이미지 해설 규칙 (절대 필수 - 이 규칙을 어기면 안 됨!)
 
-**모든 이미지는 반드시 15-20줄 이상의 상세한 해설 필수:**
+**⚠️ 경고: 모든 이미지는 반드시 20-30줄 이상의 학술적 해설이 필요합니다.**
+**짧은 설명(10줄 미만)은 절대 허용되지 않습니다.**
 
-각 이미지 바로 아래에 다음 내용을 포함하여 작성:
+### 필수 구조 (모든 이미지에 적용)
 
-1. **전체 구조/흐름 개요** (2-3줄)
-   - 이미지가 논문의 어떤 부분을 시각화하는지
-   - 전체적인 데이터/정보의 흐름 방향
+각 이미지 바로 아래에 다음 5개 섹션을 **불릿 포인트로** 작성:
 
-2. **각 블록/컴포넌트의 상세 설명** (5-7줄)
-   - 각 박스, 화살표, 색상의 의미
-   - **논문 본문에서 언급된 정확한 표현 인용**
-   - 수학적 표기법이 있다면 LaTeX로 명시 (예: $W_Q$, $W_K$, $W_V$)
+#### 섹션 1: 전체 구조 개요 (3-4줄)
+- 이 그림이 논문의 어떤 섹션/개념을 시각화하는지 명시
+- 전체적인 데이터/정보의 흐름 방향 (왼쪽→오른쪽, 위→아래 등)
+- 주요 컴포넌트 개수와 역할 요약
 
-3. **입력→처리→출력 단계별 설명** (3-4줄)
-   - 입력 데이터의 형태/차원 (예: "[batch, seq_len, d_model]")
-   - 중간 처리 과정의 수학적 연산
-   - 출력의 형태와 의미
+#### 섹션 2: 컴포넌트별 상세 설명 (8-10줄)
+각 블록/모듈마다 **볼드 제목 + 불릿 리스트**:
 
-4. **핵심 기술적 세부사항** (3-4줄)
-   - 논문에서 언급된 하이퍼파라미터
-   - 계산 복잡도나 효율성 관련 언급
-   - 다른 방법론과의 차이점
+**[컴포넌트 A 이름] (위치 설명)**
+- 역할: 무엇을 하는 모듈인지
+- 입력: 어떤 형태의 데이터가 들어오는지 (차원 포함)
+- 처리: 내부에서 어떤 연산이 일어나는지
+- 출력: 어떤 형태로 나가는지
+- 수식: 해당되면 LaTeX로 $W_q \\in \\mathbb{R}^{d \\times k}$
 
-5. **수치/실험 결과** (2-3줄, 해당시)
-   - 그래프/표에서 읽을 수 있는 구체적 수치
-   - 베이스라인 대비 성능 향상 (예: "+5.2 F1", "-23% latency")
+**[컴포넌트 B 이름] (위치 설명)**
+- 역할: ...
+- 입력: ...
+- (동일 구조 반복)
 
-**마크다운 포맷 적극 활용:**
-- 번호 매기기: \`1. 첫 번째 컴포넌트\`, \`2. 두 번째 컴포넌트\`
-- 불릿: \`- 서브 항목\`, \`* 중요 포인트\`
-- **볼드**: 중요 용어나 수치 강조 (\`**Query Encoder**\`, \`**768차원**\`)
-- 수식: 인라인 \`$...$\`, 블록 \`$$...$$\`
+#### 섹션 3: 데이터 흐름 단계별 설명 (4-5줄)
+1. **입력 단계**: 원본 데이터 형태, 전처리 과정
+2. **인코딩 단계**: 임베딩 변환, 차원 변화
+3. **핵심 처리 단계**: 논문의 핵심 contribution이 적용되는 부분
+4. **출력 단계**: 최종 결과물의 형태와 의미
 
-**예시:**
-![[images/fig1.png]]
+#### 섹션 4: 기술적 세부사항 (4-5줄)
+- **하이퍼파라미터**: \`hidden_dim=768\`, \`num_layers=12\` 등
+- **계산 복잡도**: $O(n^2)$ → $O(n \\log n)$ 개선
+- **메모리 사용량**: 기존 대비 몇 % 감소
+- **학습 설정**: optimizer, learning rate, batch size
 
-그림 1은 제안된 Token Routing 아키텍처의 전체 구조를 보여준다.
+#### 섹션 5: 실험 결과 연계 (3-4줄, 표/그래프인 경우)
+- **베이스라인 대비 성능**: +5.2 F1, -23% latency
+- **최고 성능 달성 조건**: 어떤 설정에서 최고인지
+- **Ablation 결과**: 어떤 컴포넌트가 가장 중요한지
+
+---
+
+### 예시 (이 수준의 상세함 필수):
+
+![[images/img-1.png]]
+
+**그림 1: Token Routing 아키텍처의 전체 구조**
+
+이 그림은 논문 Section 3에서 제안하는 Token Routing 메커니즘의 전체 파이프라인을 보여준다. 데이터는 왼쪽에서 오른쪽으로 흐르며, 크게 3개의 주요 모듈(Query Encoder, Routing Module, Retrieval Head)로 구성된다.
 
 **1. Query Encoder (왼쪽 파란 박스)**
-- 입력 텍스트를 **768차원 임베딩**으로 변환
-- BERT-base 아키텍처 사용 (논문 Section 3.1)
-- 입력: 텍스트 쿼리 (최대 512 토큰)
-- 출력: $\\mathbf{q} \\in \\mathbb{R}^{768}$
+- **역할**: 입력 텍스트를 dense embedding으로 변환
+- **아키텍처**: BERT-base (\`12 layers\`, \`hidden_dim=768\`)
+- **입력**: 텍스트 쿼리, 최대 512 토큰
+- **출력**: $\\mathbf{q} \\in \\mathbb{R}^{768}$
+- **특징**: pretrained weights 사용, fine-tuning 가능
 
-**2. Routing Module (중앙 블록)**
-- 학습 가능한 가중치 행렬 $W_q \\in \\mathbb{R}^{128 \\times 768}$
-- 라우팅 점수 계산: $\\mathbf{s} = W_q \\mathbf{q}$
-- 소프트맥스 정규화 후 상위 $k=16$개 토큰 선택
-- 논문에서 "query-conditional token selection"으로 명명
+**2. Routing Module (중앙 주황색 블록)**
+- **역할**: query-conditional하게 중요 토큰 선택
+- **핵심 수식**: 라우팅 점수 $\\mathbf{s} = \\text{softmax}(W_r \\cdot \\mathbf{q})$
+  - $W_r \\in \\mathbb{R}^{V \\times 768}$: 학습 가능한 라우팅 행렬
+  - $V$: vocabulary size
+- **Top-k 선택**: 상위 $k=16$개 토큰만 선택 (논문 Table 2에서 최적값)
+- **장점**: 계산량 **87.5% 감소** (128→16 토큰)
 
-**3. Retrieval Head (오른쪽 블록)**
-- 선택된 16개 토큰을 연결하여 문서 인코더와 내적
-- 점선 화살표는 역전파 경로 (end-to-end 학습)
-- 계산량 **87.5% 감소** (128→16 토큰)
+**3. Retrieval Head (오른쪽 녹색 블록)**
+- **역할**: 선택된 토큰으로 문서 유사도 계산
+- **연산**: 선택된 16개 토큰 임베딩과 문서 인코더 출력의 내적
+- **점선 화살표**: 역전파 경로 (end-to-end 학습 지원)
+- **출력**: relevance score $\\in [0, 1]$
 
-**실험 결과**: MS MARCO 데이터셋에서 F1 87.3 달성, 지연시간 12ms (기존 42ms 대비 71% 감소)
+**데이터 흐름 요약**:
+1. Query 텍스트 → BERT 인코딩 → 768차원 벡터
+2. 라우팅 점수 계산 → Top-16 토큰 인덱스 추출
+3. 선택된 토큰만으로 경량화된 retrieval 수행
+4. 최종 유사도 점수 출력
+
+**실험 결과 (Table 1 참조)**:
+- MS MARCO: **F1 87.3** (baseline 82.3 대비 +5.0)
+- 지연시간: **12ms** (기존 42ms 대비 71% 감소)
+- 메모리: **2.3GB** (기존 8.1GB 대비 72% 감소)
+
+---
+
+⚠️ **위 예시처럼 모든 이미지를 20줄 이상으로 상세하게 설명해야 합니다!**
 `;
 
 // Blog generation prompts by style
@@ -140,6 +220,7 @@ const BLOG_PROMPTS: Record<string, string> = {
 - 기술적 인사이트: 왜 이 방법이 작동하는가?
 - 실무적 함의: 어떤 시스템/서비스에 적용 가능한가?
 - 향후 연구 방향
+${MARKDOWN_FORMATTING_RULES}
 ${IMAGE_DESCRIPTION_INSTRUCTIONS}
 ${OBSIDIAN_FORMAT_INSTRUCTIONS}
 
@@ -293,61 +374,55 @@ export class BlogGeneratorService {
       const stylePrompt = BLOG_PROMPTS[this.settings.blogStyle] || BLOG_PROMPTS.technical;
       const langInstruction = LANGUAGE_INSTRUCTIONS[this.settings.blogLanguage] || LANGUAGE_INSTRUCTIONS.ko;
 
-      // Build image instruction with deep analysis results
-      let imageInstruction = "";
-      if (images.length > 0) {
-        imageInstruction = `\n\n## AVAILABLE IMAGES WITH ANALYSIS
-You MUST include these images in your blog post with Obsidian embed syntax ![[images/filename]].
-For each image, write detailed explanations based on the analysis provided.
+      // Build system prompt with image instructions
+      const imageInstructions = images.length > 0 ? `
 
-`;
-        for (const img of images) {
-          imageInstruction += `### ${img.relativePath}
-[Deep Analysis]
-${img.analysis || "(No analysis available)"}
+## IMAGES INFORMATION
+You will receive ${images.length} images with their analysis.
+- Each image is labeled as "IMAGE N: images/filename"
+- The analysis is provided right before each image
+- You MUST include ALL images in your blog post using Obsidian embed syntax: ![[images/filename]]
+- For each image, write 20-30 lines of detailed explanation based on the analysis AND the actual image
+- Place images in appropriate sections (architecture in Method, results in Experiment, etc.)
+` : "";
 
-`;
-        }
-        imageInstruction += `
-IMPORTANT:
-- Include ALL relevant images in appropriate sections
-- For each image, write 10-15 lines of detailed explanation
-- Reference specific details from the analysis above
-- Use Obsidian embed syntax: ![[${images[0].relativePath}]]
-`;
-      }
-
-      const fullPrompt = `${stylePrompt}
+      const systemPrompt = `${stylePrompt}
 
 ${langInstruction}
-${imageInstruction}
+${imageInstructions}
 
 ---
 PAPER TITLE: ${metadata?.title || "Unknown"}
 ${metadata?.title_ko ? `KOREAN TITLE: ${metadata.title_ko}` : ""}
----
+---`;
 
-PAPER CONTENT:
-${content}
-
----
-Generate the blog post now. Output markdown only, no explanations.`;
-
-      // Call Gemini with images (Multimodal)
+      // Call Gemini with interleaved images (Multimodal)
       const client = new GeminiClient(this.settings.geminiApiKey, this.settings.blogModel);
-      const promptLength = fullPrompt.length;
-      this.updateProgress("generating", `📝 Prompt size: ${(promptLength / 1024).toFixed(1)}KB + ${images.length} images`, 65);
+      this.updateProgress("generating", `📝 Using interleaved multimodal API with ${images.length} images`, 65);
 
       const startTime = Date.now();
 
-      // Use multimodal API if we have images
+      // Use interleaved multimodal API if we have images
       let result;
       if (images.length > 0) {
-        result = await client.generateContentWithImages(fullPrompt, images, {
-          temperature: 0.7,
-          maxOutputTokens: 8192,
-        });
+        // Prepare interleaved format: image label + analysis + actual image
+        const imagesWithAnalysis = images.map(img => ({
+          image: { mimeType: img.mimeType, data: img.data },
+          label: img.relativePath,
+          analysis: img.analysis || "(분석 없음)",
+        }));
+
+        result = await client.generateContentWithInterleavedImages(
+          systemPrompt,
+          imagesWithAnalysis,
+          content,
+          {
+            temperature: 0.7,
+            maxOutputTokens: 8192,
+          }
+        );
       } else {
+        const fullPrompt = `${systemPrompt}\n\nPAPER CONTENT:\n${content}\n\n---\nGenerate the blog post now. Output markdown only, no explanations.`;
         result = await client.generateContent(fullPrompt, {
           temperature: 0.7,
           maxOutputTokens: 8192,

@@ -294,6 +294,86 @@ export class GeminiClient {
       maxOutputTokens: 3072,
     });
   }
+
+  /**
+   * Generate content with interleaved images and text
+   * Each image is placed immediately after its description for better VLM understanding
+   *
+   * Format: [system prompt] → [img1 label + analysis] → [img1] → [img2 label + analysis] → [img2] → ... → [paper content]
+   */
+  async generateContentWithInterleavedImages(
+    systemPrompt: string,
+    imagesWithAnalysis: Array<{ image: ImageData; label: string; analysis: string }>,
+    paperContent: string,
+    options?: {
+      temperature?: number;
+      maxOutputTokens?: number;
+    }
+  ): Promise<ApiResponse<string>> {
+    try {
+      const url = `${this.baseUrl}/models/${this.model}:generateContent?key=${this.apiKey}`;
+
+      // Build parts array with interleaved text and images
+      const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+
+      // 1. System prompt
+      parts.push({ text: systemPrompt });
+
+      // 2. Interleave images with their analysis
+      for (let i = 0; i < imagesWithAnalysis.length; i++) {
+        const item = imagesWithAnalysis[i];
+
+        // Add image label and analysis text
+        parts.push({
+          text: `\n\n=== IMAGE ${i + 1}: ${item.label} ===\n[Deep Analysis]\n${item.analysis}\n\n[The actual image is shown below - use this for detailed visual understanding]`,
+        });
+
+        // Add the actual image immediately after
+        parts.push({
+          inlineData: {
+            mimeType: item.image.mimeType,
+            data: item.image.data,
+          },
+        });
+      }
+
+      // 3. Paper content at the end
+      parts.push({
+        text: `\n\n=== PAPER CONTENT ===\n${paperContent}\n\n---\nGenerate the blog post now. Output markdown only, no explanations.`,
+      });
+
+      const body = {
+        contents: [{ parts }],
+        generationConfig: {
+          temperature: options?.temperature ?? 0.7,
+          maxOutputTokens: options?.maxOutputTokens ?? 8192,
+        },
+      };
+
+      console.log(`[Gemini] Interleaved multimodal request with ${imagesWithAnalysis.length} images`);
+
+      const response = await requestUrl({
+        url,
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        const data = response.json;
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          return { success: true, data: text };
+        }
+        return { success: false, error: "No text in response" };
+      }
+
+      return { success: false, error: `HTTP ${response.status}: ${response.text}` };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, error: errorMessage };
+    }
+  }
 }
 
 /**
