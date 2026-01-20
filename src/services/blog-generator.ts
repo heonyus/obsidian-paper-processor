@@ -641,9 +641,11 @@ Output the section in markdown. Start with the section heading.`,
       if (result.success && result.data) {
         return result.data.trim();
       }
-      return `## ${sectionName}\n\n(생성 실패)`;
+      const errorMsg = result.error || "Unknown error";
+      console.error(`[BlogGenerator] Section ${sectionName} failed:`, errorMsg);
+      return `## ${sectionName}\n\n(생성 실패: ${errorMsg})`;
     } catch (err) {
-      console.error(`Section ${sectionName} generation failed:`, err);
+      console.error(`[BlogGenerator] Section ${sectionName} exception:`, err);
       return `## ${sectionName}\n\n(생성 실패: ${err})`;
     }
   }
@@ -725,9 +727,11 @@ Output the section in markdown. Start with the section heading.`;
         }
         return text.trim();
       }
-      return `## ${sectionName}\n\n(생성 실패)`;
+      const errorMsg = result.error || "Unknown error";
+      console.error(`[BlogGenerator] Text section ${sectionName} failed:`, errorMsg);
+      return `## ${sectionName}\n\n(생성 실패: ${errorMsg})`;
     } catch (err) {
-      console.error(`Section ${sectionName} generation failed:`, err);
+      console.error(`[BlogGenerator] Text section ${sectionName} exception:`, err);
       return `## ${sectionName}\n\n(생성 실패: ${err})`;
     }
   }
