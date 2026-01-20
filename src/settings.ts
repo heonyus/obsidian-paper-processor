@@ -53,9 +53,9 @@ export const DEFAULT_SETTINGS: PaperProcessorSettings = {
 
   // Model Settings
   ocrModel: "mistral-ocr-latest",
-  translationModel: "gemini-2.5-flash-lite",
+  translationModel: "gemini-3-flash-preview",
   translationLanguage: "Korean",
-  blogModel: "gemini-2.5-flash-lite",
+  blogModel: "gemini-3-flash-preview",
 
   // Blog Settings
   enableBlog: true,
@@ -148,7 +148,7 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Google Gemini API key")
-      .setDesc("For Gemini models (gemini-3.0-pro, gemini-3.0-flash, etc.).")
+      .setDesc("For Gemini models (gemini-3-pro-preview, gemini-3-flash-preview, etc.).")
       .addText((text) =>
         text
           .setPlaceholder("Enter your Google Gemini API key")
@@ -185,8 +185,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           })
       );
 
-    // ===== General Settings Section =====
-    new Setting(containerEl).setName("General settings").setHeading();
+    // ===== Output Section =====
+    new Setting(containerEl).setName("Output").setHeading();
 
     new Setting(containerEl)
       .setName("Output folder")
@@ -201,8 +201,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           })
       );
 
-    // ===== Model Settings Section =====
-    new Setting(containerEl).setName("Model settings").setHeading();
+    // ===== Models Section =====
+    new Setting(containerEl).setName("Models").setHeading();
 
     new Setting(containerEl)
       .setName("OCR model")
@@ -231,9 +231,9 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           .addOption("claude-4.5-sonnet", "Claude 4.5 Sonnet (Anthropic)")
           .addOption("claude-4.5-haiku", "Claude 4.5 Haiku (Anthropic)")
           // Google Gemini models
-          .addOption("gemini-3.0-pro", "Gemini 3.0 Pro (Google)")
-          .addOption("gemini-3.0-flash", "Gemini 3.0 Flash (Google)")
-          .addOption("gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite (Google)")
+          .addOption("gemini-3-pro-preview", "Gemini 3 Pro Preview (Google)")
+          .addOption("gemini-3-flash-preview", "Gemini 3 Flash Preview (Google)")
+          .addOption("gemini-2.0-flash", "Gemini 2.0 Flash (Google)")
           // DeepSeek models
           .addOption("deepseek-r1", "DeepSeek R1 (DeepSeek)")
           .addOption("deepseek-v3", "DeepSeek V3 (DeepSeek)")
@@ -287,9 +287,9 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           .addOption("claude-4.5-sonnet", "Claude 4.5 Sonnet (Anthropic)")
           .addOption("claude-4.5-haiku", "Claude 4.5 Haiku (Anthropic)")
           // Google Gemini models
-          .addOption("gemini-3.0-pro", "Gemini 3.0 Pro (Google)")
-          .addOption("gemini-3.0-flash", "Gemini 3.0 Flash (Google)")
-          .addOption("gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite (Google)")
+          .addOption("gemini-3-pro-preview", "Gemini 3 Pro Preview (Google)")
+          .addOption("gemini-3-flash-preview", "Gemini 3 Flash Preview (Google)")
+          .addOption("gemini-2.0-flash", "Gemini 2.0 Flash (Google)")
           // DeepSeek models
           .addOption("deepseek-r1", "DeepSeek R1 (DeepSeek)")
           .addOption("deepseek-v3", "DeepSeek V3 (DeepSeek)")
@@ -303,8 +303,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           })
       );
 
-    // ===== Blog Settings Section =====
-    new Setting(containerEl).setName("Blog settings").setHeading();
+    // ===== Blog Section =====
+    new Setting(containerEl).setName("Blog").setHeading();
 
     new Setting(containerEl)
       .setName("Enable blog generation")
@@ -349,7 +349,7 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     // ===== arXiv Settings Section =====
-    new Setting(containerEl).setName("arXiv settings").setHeading();
+    new Setting(containerEl).setName("arXiv").setHeading();
 
     new Setting(containerEl)
       .setName("Default category")
@@ -385,7 +385,7 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     // ===== Sidebar Settings Section =====
-    new Setting(containerEl).setName("Sidebar settings").setHeading();
+    new Setting(containerEl).setName("Sidebar").setHeading();
 
     new Setting(containerEl)
       .setName("Default tab")
@@ -439,7 +439,6 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           .setValue(String(this.plugin.settings.usageAlertThreshold))
           .onChange(async (value) => {
             const num = parseFloat(value) || 0;
-            this.plugin.settings.usageAlertThreshold = Math.max(0, num);
             await this.plugin.saveSettings();
           })
       );

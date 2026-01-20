@@ -797,12 +797,15 @@ export class PaperProcessorView extends ItemView {
 
     // Token stats row
     const tokenRow = summaryCard.createEl("div", { cls: "pp-usage-token-row" });
-    tokenRow.createEl("div", { cls: "pp-usage-stat" }).innerHTML =
-      `<span class="pp-usage-stat-label">Input</span><span class="pp-usage-stat-value">${formatTokens(stats.totalInputTokens)}</span>`;
-    tokenRow.createEl("div", { cls: "pp-usage-stat" }).innerHTML =
-      `<span class="pp-usage-stat-label">Output</span><span class="pp-usage-stat-value">${formatTokens(stats.totalOutputTokens)}</span>`;
-    tokenRow.createEl("div", { cls: "pp-usage-stat" }).innerHTML =
-      `<span class="pp-usage-stat-label">Calls</span><span class="pp-usage-stat-value">${stats.totalCalls}</span>`;
+    const inputStat = tokenRow.createEl("div", { cls: "pp-usage-stat" });
+    inputStat.createEl("span", { cls: "pp-usage-stat-label", text: "Input" });
+    inputStat.createEl("span", { cls: "pp-usage-stat-value", text: formatTokens(stats.totalInputTokens) });
+    const outputStat = tokenRow.createEl("div", { cls: "pp-usage-stat" });
+    outputStat.createEl("span", { cls: "pp-usage-stat-label", text: "Output" });
+    outputStat.createEl("span", { cls: "pp-usage-stat-value", text: formatTokens(stats.totalOutputTokens) });
+    const callsStat = tokenRow.createEl("div", { cls: "pp-usage-stat" });
+    callsStat.createEl("span", { cls: "pp-usage-stat-label", text: "Calls" });
+    callsStat.createEl("span", { cls: "pp-usage-stat-value", text: String(stats.totalCalls) });
 
     // Session duration
     const duration = Math.round((Date.now() - stats.sessionStartTime) / 60000);
@@ -850,9 +853,9 @@ export class PaperProcessorView extends ItemView {
         const featureInfo = featureLabels[feature] || { icon: "📊", label: feature };
         const card = featureCards.createEl("div", { cls: "pp-usage-feature-card" });
 
-        card.createEl("div", { cls: "pp-usage-feature-header" }).innerHTML =
-          `<span class="pp-usage-feature-icon">${featureInfo.icon}</span>` +
-          `<span class="pp-usage-feature-name">${featureInfo.label}</span>`;
+        const featureHeader = card.createEl("div", { cls: "pp-usage-feature-header" });
+        featureHeader.createEl("span", { cls: "pp-usage-feature-icon", text: featureInfo.icon });
+        featureHeader.createEl("span", { cls: "pp-usage-feature-name", text: featureInfo.label });
 
         card.createEl("div", { cls: "pp-usage-feature-cost", text: formatCost(data.cost) });
 
