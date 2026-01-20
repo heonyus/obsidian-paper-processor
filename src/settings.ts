@@ -196,15 +196,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("OCR Model")
-      .setDesc("Mistral model for OCR processing")
+      .setDesc("Mistral model for OCR processing (fixed)")
       .addText((text) =>
         text
-          .setPlaceholder("mistral-ocr-latest")
           .setValue(this.plugin.settings.ocrModel)
-          .onChange(async (value) => {
-            this.plugin.settings.ocrModel = value || "mistral-ocr-latest";
-            await this.plugin.saveSettings();
-          })
+          .setDisabled(true)
       );
 
     new Setting(containerEl)
@@ -215,7 +211,7 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           // xAI Grok models (latest)
           .addOption("grok-4.1-fast-non-reasoning", "Grok 4.1 Fast Non-Reasoning (xAI)")
           .addOption("grok-4.1-fast", "Grok 4.1 Fast (xAI)")
-          .addOption("grok-4", "Grok 4 (xAI)")
+          .addOption("grok-4.1", "Grok 4.1 (xAI)")
           // OpenAI models (latest: 5.2)
           .addOption("gpt-5.2", "GPT-5.2 (OpenAI)")
           .addOption("gpt-5.2-mini", "GPT-5.2 Mini (OpenAI)")
@@ -265,12 +261,31 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Blog Model")
-      .setDesc("Model for blog generation (requires Gemini API key)")
+      .setDesc("Select AI model for blog generation (requires corresponding API key)")
       .addDropdown((dropdown) =>
         dropdown
+          // xAI Grok models (latest)
+          .addOption("grok-4.1-fast-non-reasoning", "Grok 4.1 Fast Non-Reasoning (xAI)")
+          .addOption("grok-4.1-fast", "Grok 4.1 Fast (xAI)")
+          .addOption("grok-4.1", "Grok 4.1 (xAI)")
+          // OpenAI models (latest: 5.2)
+          .addOption("gpt-5.2", "GPT-5.2 (OpenAI)")
+          .addOption("gpt-5.2-mini", "GPT-5.2 Mini (OpenAI)")
+          .addOption("gpt-4o", "GPT-4o (OpenAI)")
+          // Anthropic Claude models (latest: 4.5)
+          .addOption("claude-4.5-opus", "Claude 4.5 Opus (Anthropic)")
+          .addOption("claude-4.5-sonnet", "Claude 4.5 Sonnet (Anthropic)")
+          .addOption("claude-4.5-haiku", "Claude 4.5 Haiku (Anthropic)")
+          // Google Gemini models
+          .addOption("gemini-3.0-pro", "Gemini 3.0 Pro (Google)")
+          .addOption("gemini-3.0-flash", "Gemini 3.0 Flash (Google)")
           .addOption("gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite (Google)")
-          .addOption("gemini-3-flash-preview", "Gemini 3 Flash Preview (Google)")
-          .addOption("gemini-3-pro-preview", "Gemini 3 Pro Preview (Google)")
+          // DeepSeek models
+          .addOption("deepseek-r1", "DeepSeek R1 (DeepSeek)")
+          .addOption("deepseek-v3", "DeepSeek V3 (DeepSeek)")
+          // Groq models (fast inference)
+          .addOption("llama-3.3-70b-versatile", "Llama 3.3 70B (Groq)")
+          .addOption("deepseek-r1-distill-llama-70b", "DeepSeek R1 Distill 70B (Groq)")
           .setValue(this.plugin.settings.blogModel)
           .onChange(async (value) => {
             this.plugin.settings.blogModel = value;

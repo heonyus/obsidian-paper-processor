@@ -28,7 +28,14 @@ export class PaperProcessorView extends ItemView {
     translate: true,
     blog: false,
   };
-  private isProcessing = false;
+  // Track multiple processing jobs in parallel
+  private processingJobs: Map<string, {
+    logs: string[];
+    progressPercent: number;
+    currentStep: string;
+    outputFolder: string | null;
+    startTime: number;
+  }> = new Map();
   private processLogs: string[] = [];
   private progressLogEl: HTMLElement | null = null;
   private progressPercent = 0;
@@ -362,12 +369,13 @@ export class PaperProcessorView extends ItemView {
     });
 
     // Process button
+    const isCurrentFileProcessing = this.selectedPdfPath ? this.processingJobs.has(this.selectedPdfPath) : false;
     const processBtn = container.createEl("button", {
       cls: "pp-btn pp-btn-primary pp-btn-large",
-      text: this.isProcessing ? "Processing..." : "Process Paper",
+      text: isCurrentFileProcessing ? "Processing..." : "Process Paper",
     });
 
-    if (!this.selectedPdfPath || this.isProcessing) {
+    if (!this.selectedPdfPath || isCurrentFileProcessing) {
       processBtn.disabled = true;
     }
 
@@ -376,7 +384,8 @@ export class PaperProcessorView extends ItemView {
     });
 
     // Progress area (always show when processing or has logs)
-    if (this.isProcessing || this.processLogs.length > 0) {
+    const hasActiveJobs = this.processingJobs.size > 0;
+    if (hasActiveJobs || this.processLogs.length > 0) {
       const progressArea = container.createEl("div", { cls: "pp-progress-area" });
 
       // Current step header
@@ -440,7 +449,7 @@ export class PaperProcessorView extends ItemView {
       this.progressLogEl.scrollTop = this.progressLogEl.scrollHeight;
 
       // Clear button (only when not processing)
-      if (!this.isProcessing && this.processLogs.length > 0) {
+      if (!hasActiveJobs && this.processLogs.length > 0) {
         const clearBtn = progressArea.createEl("button", {
           cls: "pp-btn pp-btn-small pp-btn-secondary",
           text: "Clear Logs"
@@ -514,7 +523,13 @@ export class PaperProcessorView extends ItemView {
   private currentOutputFolder: string | null = null;
 
   private async processPaper(): Promise<void> {
-    if (!this.selectedPdfPath || this.isProcessing) return;
+    if (!this.selectedPdfPath) return;
+
+    // Check if this specific file is already being processed
+    if (this.processingJobs.has(this.selectedPdfPath)) {
+      this.showNotice("This file is already being processed");
+      return;
+    }
 
     const pdfFile = this.app.vault.getAbstractFileByPath(this.selectedPdfPath);
     if (!(pdfFile instanceof TFile)) {
@@ -522,15 +537,25 @@ export class PaperProcessorView extends ItemView {
       return;
     }
 
-    // Reset logs and start processing
+    const pdfPath = this.selectedPdfPath;
+    const startTime = Date.now();
+
+    // Register this job (allows parallel processing of different files)
+    this.processingJobs.set(pdfPath, {
+      logs: [],
+      progressPercent: 0,
+      currentStep: "",
+      outputFolder: null,
+      startTime,
+    });
+
+    // Reset current view state for this job
     this.processLogs = [];
     this.progressPercent = 0;
     this.currentStep = "";
     this.currentOutputFolder = null;
-    this.isProcessing = true;
     this.renderCurrentTab();
 
-    const startTime = Date.now();
     this.addLog(`🚀 Processing started: ${pdfFile.basename}`);
 
     try {
@@ -625,7 +650,8 @@ export class PaperProcessorView extends ItemView {
       this.addLog(`❌ Error: ${errorMsg}`);
       this.showNotice(`Error: ${errorMsg}`);
     } finally {
-      this.isProcessing = false;
+      // Remove this job from processing map
+      this.processingJobs.delete(pdfPath);
       this.currentStep = "";
       this.renderCurrentTab();
     }

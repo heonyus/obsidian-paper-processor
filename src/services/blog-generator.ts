@@ -1,5 +1,5 @@
 import { App, TFile, TFolder } from "obsidian";
-import { GeminiClient, ImageData, showError, showSuccess } from "../utils/api-client";
+import { GeminiClient, OpenAICompatibleClient, ImageData, showError, showSuccess, ApiResponse } from "../utils/api-client";
 import type { PaperProcessorSettings } from "../settings";
 import { arxivCategoriesToTags, extractTopicTags } from "../utils/obsidian-format";
 
@@ -252,15 +252,85 @@ export class BlogGeneratorService {
   }
 
   /**
+   * Check if the correct API key is configured for the selected model
+   */
+  private checkApiKey(model: string): string | null {
+    if (model.startsWith("grok-") && !this.settings.grokApiKey) {
+      return "xAI Grok API key not configured. Please set it in plugin settings.";
+    }
+    if (model.startsWith("gpt-") && !this.settings.openaiApiKey) {
+      return "OpenAI API key not configured. Please set it in plugin settings.";
+    }
+    if (model.startsWith("claude-") && !this.settings.anthropicApiKey) {
+      return "Anthropic API key not configured. Please set it in plugin settings.";
+    }
+    if (model.startsWith("gemini-") && !this.settings.geminiApiKey) {
+      return "Gemini API key not configured. Please set it in plugin settings.";
+    }
+    if (model.startsWith("deepseek-") && !model.includes("distill") && !this.settings.deepseekApiKey) {
+      return "DeepSeek API key not configured. Please set it in plugin settings.";
+    }
+    if ((model.startsWith("llama-") || model.includes("distill")) && !this.settings.groqApiKey) {
+      return "Groq API key not configured. Please set it in plugin settings.";
+    }
+    return null;
+  }
+
+  /**
+   * Create an OpenAI-compatible client for non-Gemini models
+   */
+  private createTextClient(): OpenAICompatibleClient {
+    const model = this.settings.blogModel;
+    let baseUrl: string;
+    let apiKey: string;
+
+    if (model.startsWith("grok-")) {
+      baseUrl = "https://api.x.ai/v1";
+      apiKey = this.settings.grokApiKey;
+    } else if (model.startsWith("gpt-")) {
+      baseUrl = "https://api.openai.com/v1";
+      apiKey = this.settings.openaiApiKey;
+    } else if (model.startsWith("claude-")) {
+      baseUrl = "https://api.anthropic.com/v1";
+      apiKey = this.settings.anthropicApiKey;
+    } else if (model.startsWith("deepseek-") && !model.includes("distill")) {
+      baseUrl = "https://api.deepseek.com/v1";
+      apiKey = this.settings.deepseekApiKey;
+    } else if (model.startsWith("llama-") || model.includes("distill")) {
+      // Groq models
+      baseUrl = "https://api.groq.com/openai/v1";
+      apiKey = this.settings.groqApiKey;
+    } else {
+      // Default to Gemini via OpenAI-compatible mode (not used, but fallback)
+      baseUrl = "https://generativelanguage.googleapis.com/v1beta";
+      apiKey = this.settings.geminiApiKey;
+    }
+
+    console.log(`[BlogGenerator] Model: ${model}, API: ${baseUrl}`);
+    return new OpenAICompatibleClient(baseUrl, apiKey, model);
+  }
+
+  /**
+   * Check if the current model is a Gemini model (supports multimodal)
+   */
+  private isGeminiModel(): boolean {
+    return this.settings.blogModel.startsWith("gemini-");
+  }
+
+  /**
    * Generate a blog post using sequential section generation
    */
   async generate(paperFolder: string): Promise<BlogResult> {
-    if (!this.settings.geminiApiKey) {
+    const model = this.settings.blogModel;
+    const apiKeyError = this.checkApiKey(model);
+    if (apiKeyError) {
       return {
         success: false,
-        error: "Gemini API key not configured. Please set it in plugin settings.",
+        error: apiKeyError,
       };
     }
+
+    const isGemini = this.isGeminiModel();
 
     try {
       this.updateProgress("analyzing", `📂 Reading from folder: ${paperFolder}`, 2);
@@ -279,16 +349,18 @@ export class BlogGeneratorService {
       const titleKo = metadata?.title_ko || "";
       this.updateProgress("analyzing", `📋 Title: "${title}"`, 7);
 
-      // 3. Load images
+      // 3. Load images (only used for Gemini multimodal)
       const images = await this.loadImagesWithData(paperFolder, 15);
       this.updateProgress("analyzing", `🖼️ Found ${images.length} images`, 10);
 
-      const client = new GeminiClient(this.settings.geminiApiKey, this.settings.blogModel);
+      // Create appropriate client based on model
+      const geminiClient = isGemini ? new GeminiClient(this.settings.geminiApiKey, this.settings.blogModel) : null;
+      const textClient = !isGemini ? this.createTextClient() : null;
 
-      // 4. IMAGE TRIAGE - Classify images into Tier 1/2/3
-      if (images.length > 0) {
+      // 4. IMAGE TRIAGE - Classify images into Tier 1/2/3 (Gemini only)
+      if (isGemini && geminiClient && images.length > 0) {
         this.updateProgress("analyzing", "🧩 Triaging images (Tier 1/2/3)...", 12);
-        await this.triageImages(client, images, content);
+        await this.triageImages(geminiClient, images, content);
 
         const tier1Count = images.filter(i => i.tier === 1).length;
         const tier2Count = images.filter(i => i.tier === 2).length;
@@ -305,7 +377,7 @@ export class BlogGeneratorService {
           this.updateProgress("analyzing", `${tierLabel}: ${img.name}`, 18 + (i * 2));
 
           try {
-            const analysis = await this.analyzeImage(client, img, content, metadata);
+            const analysis = await this.analyzeImage(geminiClient, img, content, metadata);
             img.analysis = analysis;
           } catch (err) {
             console.error(`Failed to analyze ${img.name}:`, err);
@@ -313,6 +385,8 @@ export class BlogGeneratorService {
           }
         }
         this.updateProgress("analyzing", `✅ Image analysis complete`, 40);
+      } else if (!isGemini) {
+        this.updateProgress("analyzing", `ℹ️ Skipping image analysis (non-Gemini model: ${model})`, 40);
       }
 
       // 6. Parse source sections
@@ -358,16 +432,31 @@ export class BlogGeneratorService {
           sourceContent = content.slice(0, 8000); // fallback
         }
 
-        // Generate section
-        const sectionText = await this.generateSection(
-          client,
-          sectionName,
-          sourceContent,
-          { title, title_ko: titleKo },
-          accumulatedContext,
-          sectionImages,
-          langInstruction
-        );
+        // Generate section (different path for Gemini vs other models)
+        let sectionText: string;
+        if (isGemini && geminiClient) {
+          sectionText = await this.generateSectionGemini(
+            geminiClient,
+            sectionName,
+            sourceContent,
+            { title, title_ko: titleKo },
+            accumulatedContext,
+            sectionImages,
+            langInstruction
+          );
+        } else if (textClient) {
+          sectionText = await this.generateSectionText(
+            textClient,
+            sectionName,
+            sourceContent,
+            { title, title_ko: titleKo },
+            accumulatedContext,
+            images, // Pass all images for reference text only
+            langInstruction
+          );
+        } else {
+          sectionText = `## ${sectionName}\n\n(클라이언트 생성 실패)`;
+        }
 
         generatedSections.push(sectionText);
         accumulatedContext += `\n\n${sectionText}`;
@@ -458,9 +547,9 @@ export class BlogGeneratorService {
   }
 
   /**
-   * Generate a single section with context
+   * Generate a single section with context (Gemini - supports multimodal)
    */
-  private async generateSection(
+  private async generateSectionGemini(
     client: GeminiClient,
     sectionName: string,
     sourceContent: string,
@@ -521,6 +610,76 @@ Output the section in markdown. Start with the section heading.`,
 
       if (result.success && result.data) {
         return result.data.trim();
+      }
+      return `## ${sectionName}\n\n(생성 실패)`;
+    } catch (err) {
+      console.error(`Section ${sectionName} generation failed:`, err);
+      return `## ${sectionName}\n\n(생성 실패: ${err})`;
+    }
+  }
+
+  /**
+   * Generate a single section with context (Text-only models - OpenAI compatible)
+   */
+  private async generateSectionText(
+    client: OpenAICompatibleClient,
+    sectionName: string,
+    sourceContent: string,
+    metadata: { title: string; title_ko: string },
+    previousSections: string,
+    images: ImageAsset[],
+    langInstruction: string
+  ): Promise<string> {
+    // Build images info (text only - no actual image data)
+    let imagesInfo = "(이미지 분석 없이 텍스트만으로 작성)";
+    const sectionImages = images.filter(img => img.section === sectionName && img.tier !== 3);
+    if (sectionImages.length > 0) {
+      imagesInfo = "다음 이미지들을 블로그에 포함하세요 (이미지 참조만):\n";
+      for (const img of sectionImages) {
+        imagesInfo += `- ![[${img.relativePath}]]\n`;
+      }
+    }
+
+    // Get section prompt
+    let sectionPrompt = SECTION_PROMPTS[sectionName] || "";
+    sectionPrompt = sectionPrompt
+      .replace("{previous_sections}", previousSections.slice(-4000) || "(첫 섹션)")
+      .replace("{images_info}", imagesInfo);
+
+    const prompt = `논문 메타데이터:
+- Title: ${metadata.title}
+- Title (Korean): ${metadata.title_ko || "N/A"}
+
+${langInstruction}
+
+${sectionPrompt}
+
+원문 내용:
+${sourceContent.slice(0, 6000)}
+
+---
+Output the section in markdown. Start with the section heading.`;
+
+    try {
+      const result = await client.chatCompletion(
+        [{ role: "user", content: prompt }],
+        { temperature: 0.5, maxTokens: 4096 }
+      );
+
+      if (result.success && result.data) {
+        // Remove code blocks if LLM wrapped output
+        let text = result.data;
+        if (text.startsWith("```")) {
+          const lines = text.split("\n");
+          if (lines[0].startsWith("```")) {
+            lines.shift();
+          }
+          if (lines.length > 0 && lines[lines.length - 1].trim() === "```") {
+            lines.pop();
+          }
+          text = lines.join("\n");
+        }
+        return text.trim();
       }
       return `## ${sectionName}\n\n(생성 실패)`;
     } catch (err) {
