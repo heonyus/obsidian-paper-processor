@@ -1,6 +1,8 @@
 import { App, TFile } from "obsidian";
 import { MistralOCRClient, showError, showSuccess } from "../utils/api-client";
 import type { PaperProcessorSettings } from "../settings";
+import { getUsageTracker } from "./usage-tracker";
+import { formatCost, formatTokens } from "../utils/pricing-table";
 
 export interface OCRResult {
   success: boolean;
@@ -89,7 +91,20 @@ export class OCRService {
         };
       }
 
-      this.updateProgress("extracting", `✅ OCR complete in ${elapsed}s`, 55);
+      // Record usage if available
+      let usageCostMessage = "";
+      if (result.usage) {
+        const usageTracker = getUsageTracker();
+        const cost = usageTracker.recordUsage({
+          provider: "Mistral",
+          model: this.settings.ocrModel,
+          feature: "ocr",
+          usage: result.usage,
+        });
+        usageCostMessage = ` | ${formatTokens(result.usage.totalTokens)} tokens, ${formatCost(cost.totalCost)}`;
+      }
+
+      this.updateProgress("extracting", `✅ OCR complete in ${elapsed}s${usageCostMessage}`, 55);
 
       // Count pages from markdown
       const pageCount = (result.data.markdown.match(/<!-- Page \d+ -->/g) || []).length;

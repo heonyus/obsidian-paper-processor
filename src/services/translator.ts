@@ -1,6 +1,8 @@
 import { App, TFile } from "obsidian";
 import { OpenAICompatibleClient, GeminiClient, showError, showSuccess } from "../utils/api-client";
 import type { PaperProcessorSettings } from "../settings";
+import { getUsageTracker } from "./usage-tracker";
+import { getProviderFromModel, formatCost, formatTokens } from "../utils/pricing-table";
 
 export interface TranslationResult {
   success: boolean;
@@ -180,7 +182,10 @@ export class TranslatorService {
 
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
+    let totalCost = 0;
     const startTimeTotal = Date.now();
+    const usageTracker = getUsageTracker();
+    const provider = getProviderFromModel(model);
 
     for (let i = 0; i < pages.length; i++) {
       const page = pages[i];
@@ -195,10 +200,9 @@ export class TranslatorService {
         .replace("{previous_context}", previousContext)
         .replace("{text}", page);
 
-      let result: { success: boolean; data?: string; error?: string };
+      let result: { success: boolean; data?: string; error?: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } };
 
       const pageStartTime = Date.now();
-      totalInputTokens += prompt.length / 4; // rough estimate
 
       if (isGemini) {
         const geminiClient = new GeminiClient(this.settings.geminiApiKey, model);
@@ -217,8 +221,28 @@ export class TranslatorService {
         return { success: false, error: result.error || "Translation failed" };
       }
 
-      totalOutputTokens += result.data.length / 4; // rough estimate
-      this.updateProgress("translating", `✅ Page ${i + 1} done in ${pageElapsed}s (${result.data.split(/\s+/).length} words)`, percent, i + 1, pages.length);
+      // Record actual usage if available, otherwise estimate
+      if (result.usage) {
+        const cost = usageTracker.recordUsage({
+          provider,
+          model,
+          feature: "translation",
+          usage: result.usage,
+        });
+        totalInputTokens += result.usage.promptTokens;
+        totalOutputTokens += result.usage.completionTokens;
+        totalCost += cost.totalCost;
+        this.updateProgress("translating",
+          `✅ Page ${i + 1} done in ${pageElapsed}s (${formatTokens(result.usage.totalTokens)} tokens, ${formatCost(cost.totalCost)})`,
+          percent, i + 1, pages.length);
+      } else {
+        // Fallback to estimation
+        const estimatedInput = Math.round(prompt.length / 4);
+        const estimatedOutput = Math.round(result.data.length / 4);
+        totalInputTokens += estimatedInput;
+        totalOutputTokens += estimatedOutput;
+        this.updateProgress("translating", `✅ Page ${i + 1} done in ${pageElapsed}s (~${(estimatedInput + estimatedOutput).toLocaleString()} tokens est.)`, percent, i + 1, pages.length);
+      }
 
       // Remove code blocks if LLM wrapped output
       let translated = result.data;
@@ -261,7 +285,10 @@ export class TranslatorService {
 
     this.updateProgress("complete", `✅ Translation complete!`, 100);
     this.updateProgress("complete", `📊 Total: ${pages.length} pages, ${translatedWords.toLocaleString()} words in ${totalElapsed}s`, 100);
-    this.updateProgress("complete", `⚡ Estimated tokens: ~${Math.round(totalInputTokens).toLocaleString()} in, ~${Math.round(totalOutputTokens).toLocaleString()} out`, 100);
+    this.updateProgress("complete", `⚡ Tokens: ${formatTokens(totalInputTokens)} in, ${formatTokens(totalOutputTokens)} out`, 100);
+    if (totalCost > 0) {
+      this.updateProgress("complete", `💰 Cost: ${formatCost(totalCost)}`, 100);
+    }
     showSuccess("Translation complete!");
 
     return {

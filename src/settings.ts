@@ -30,7 +30,12 @@ export interface PaperProcessorSettings {
   arxivMaxResults: number;
 
   // Sidebar Settings
-  sidebarDefaultTab: "search" | "process" | "papers";
+  sidebarDefaultTab: "search" | "process" | "papers" | "usage";
+
+  // Usage Tracking Settings
+  enableUsageTracking: boolean;
+  showUsageInSidebar: boolean;
+  usageAlertThreshold: number;
 }
 
 export const DEFAULT_SETTINGS: PaperProcessorSettings = {
@@ -63,6 +68,11 @@ export const DEFAULT_SETTINGS: PaperProcessorSettings = {
 
   // Sidebar Settings
   sidebarDefaultTab: "search",
+
+  // Usage Tracking Settings
+  enableUsageTracking: true,
+  showUsageInSidebar: true,
+  usageAlertThreshold: 0,
 };
 
 export class PaperProcessorSettingTab extends PluginSettingTab {
@@ -385,9 +395,51 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           .addOption("search", "Search (arXiv)")
           .addOption("process", "Process (PDF)")
           .addOption("papers", "Papers (library)")
+          .addOption("usage", "Usage (statistics)")
           .setValue(this.plugin.settings.sidebarDefaultTab)
-          .onChange(async (value: "search" | "process" | "papers") => {
+          .onChange(async (value: "search" | "process" | "papers" | "usage") => {
             this.plugin.settings.sidebarDefaultTab = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    // ===== Usage Tracking Settings Section =====
+    new Setting(containerEl).setName("Usage tracking").setHeading();
+
+    new Setting(containerEl)
+      .setName("Enable usage tracking")
+      .setDesc("Track API token usage and calculate costs for each call.")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.enableUsageTracking)
+          .onChange(async (value) => {
+            this.plugin.settings.enableUsageTracking = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Show usage in sidebar")
+      .setDesc("Display the Usage tab in the sidebar navigation.")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.showUsageInSidebar)
+          .onChange(async (value) => {
+            this.plugin.settings.showUsageInSidebar = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Cost alert threshold")
+      .setDesc("Show a warning when session cost exceeds this amount (USD). Set to 0 to disable.")
+      .addText((text) =>
+        text
+          .setPlaceholder("0")
+          .setValue(String(this.plugin.settings.usageAlertThreshold))
+          .onChange(async (value) => {
+            const num = parseFloat(value) || 0;
+            this.plugin.settings.usageAlertThreshold = Math.max(0, num);
             await this.plugin.saveSettings();
           })
       );

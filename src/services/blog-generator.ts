@@ -2,6 +2,9 @@ import { App, TFile, TFolder } from "obsidian";
 import { GeminiClient, OpenAICompatibleClient, ImageData, showError, showSuccess, ApiResponse } from "../utils/api-client";
 import type { PaperProcessorSettings } from "../settings";
 import { arxivCategoriesToTags, extractTopicTags } from "../utils/obsidian-format";
+import { getUsageTracker } from "./usage-tracker";
+import { getProviderFromModel, formatCost, formatTokens } from "../utils/pricing-table";
+import type { TokenUsage } from "../types/usage";
 
 export interface BlogResult {
   success: boolean;
@@ -499,12 +502,25 @@ export class BlogGeneratorService {
 
     const imageNames = images.map(i => i.name).join("\n");
     const userMsg = `Paper Content (Abstract):\n${context}\n\nImage List:\n${imageNames}`;
+    const usageTracker = getUsageTracker();
+    const model = this.settings.blogModel;
+    const provider = getProviderFromModel(model);
 
     try {
       const result = await client.generateContent(
         `${TRIAGE_PROMPT}\n\n${userMsg}`,
         { temperature: 0.2, maxOutputTokens: 2048 }
       );
+
+      // Record usage if available
+      if (result.usage) {
+        usageTracker.recordUsage({
+          provider,
+          model,
+          feature: "blog",
+          usage: result.usage,
+        });
+      }
 
       if (result.success && result.data) {
         // Parse JSON from response
@@ -602,11 +618,25 @@ Output the section in markdown. Start with the section heading.`,
       });
     }
 
+    const usageTracker = getUsageTracker();
+    const model = this.settings.blogModel;
+    const provider = getProviderFromModel(model);
+
     try {
       const result = await client.generateContentWithParts(userParts, {
         temperature: 0.5,
         maxOutputTokens: 4096,
       });
+
+      // Record usage if available
+      if (result.usage) {
+        usageTracker.recordUsage({
+          provider,
+          model,
+          feature: "blog",
+          usage: result.usage,
+        });
+      }
 
       if (result.success && result.data) {
         return result.data.trim();
@@ -660,11 +690,25 @@ ${sourceContent.slice(0, 6000)}
 ---
 Output the section in markdown. Start with the section heading.`;
 
+    const usageTracker = getUsageTracker();
+    const model = this.settings.blogModel;
+    const provider = getProviderFromModel(model);
+
     try {
       const result = await client.chatCompletion(
         [{ role: "user", content: prompt }],
         { temperature: 0.5, maxTokens: 4096 }
       );
+
+      // Record usage if available
+      if (result.usage) {
+        usageTracker.recordUsage({
+          provider,
+          model,
+          feature: "blog",
+          usage: result.usage,
+        });
+      }
 
       if (result.success && result.data) {
         // Remove code blocks if LLM wrapped output
@@ -774,6 +818,19 @@ Output in Korean markdown.`;
       paperContext,
       analysisPrompt
     );
+
+    // Record usage if available
+    if (result.usage) {
+      const usageTracker = getUsageTracker();
+      const model = this.settings.blogModel;
+      const provider = getProviderFromModel(model);
+      usageTracker.recordUsage({
+        provider,
+        model,
+        feature: "blog",
+        usage: result.usage,
+      });
+    }
 
     return result.success && result.data ? result.data : "(분석 실패)";
   }

@@ -150,12 +150,25 @@ export class OpenAICompatibleClient extends ApiClient {
 
     const response = await this.post<{
       choices: Array<{ message: { content: string } }>;
+      usage?: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+      };
     }>("/chat/completions", body);
 
     if (response.success && response.data) {
       const content = response.data.choices?.[0]?.message?.content;
       if (content) {
-        return { success: true, data: content };
+        // Parse usage from response
+        const rawUsage = response.data.usage;
+        const usage: TokenUsage | undefined = rawUsage ? {
+          promptTokens: rawUsage.prompt_tokens,
+          completionTokens: rawUsage.completion_tokens,
+          totalTokens: rawUsage.total_tokens,
+        } : undefined;
+
+        return { success: true, data: content, usage };
       }
       return { success: false, error: "No content in response" };
     }
@@ -212,7 +225,15 @@ export class GeminiClient {
         const data = response.json;
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (text) {
-          return { success: true, data: text };
+          // Parse usageMetadata from Gemini response
+          const usageMetadata = data?.usageMetadata;
+          const usage: TokenUsage | undefined = usageMetadata ? {
+            promptTokens: usageMetadata.promptTokenCount || 0,
+            completionTokens: usageMetadata.candidatesTokenCount || 0,
+            totalTokens: usageMetadata.totalTokenCount || 0,
+          } : undefined;
+
+          return { success: true, data: text, usage };
         }
         return { success: false, error: "No text in response" };
       }
@@ -272,7 +293,15 @@ export class GeminiClient {
         const data = response.json;
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (text) {
-          return { success: true, data: text };
+          // Parse usageMetadata from Gemini response
+          const usageMetadata = data?.usageMetadata;
+          const usage: TokenUsage | undefined = usageMetadata ? {
+            promptTokens: usageMetadata.promptTokenCount || 0,
+            completionTokens: usageMetadata.candidatesTokenCount || 0,
+            totalTokens: usageMetadata.totalTokenCount || 0,
+          } : undefined;
+
+          return { success: true, data: text, usage };
         }
         return { success: false, error: "No text in response" };
       }
@@ -333,7 +362,15 @@ export class GeminiClient {
         const data = response.json;
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (text) {
-          return { success: true, data: text };
+          // Parse usageMetadata from Gemini response
+          const usageMetadata = data?.usageMetadata;
+          const usage: TokenUsage | undefined = usageMetadata ? {
+            promptTokens: usageMetadata.promptTokenCount || 0,
+            completionTokens: usageMetadata.candidatesTokenCount || 0,
+            totalTokens: usageMetadata.totalTokenCount || 0,
+          } : undefined;
+
+          return { success: true, data: text, usage };
         }
         return { success: false, error: "No text in response" };
       }
@@ -413,7 +450,15 @@ export class GeminiClient {
         const data = response.json;
         const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (text) {
-          return { success: true, data: text };
+          // Parse usageMetadata from Gemini response
+          const usageMetadata = data?.usageMetadata;
+          const usage: TokenUsage | undefined = usageMetadata ? {
+            promptTokens: usageMetadata.promptTokenCount || 0,
+            completionTokens: usageMetadata.candidatesTokenCount || 0,
+            totalTokens: usageMetadata.totalTokenCount || 0,
+          } : undefined;
+
+          return { success: true, data: text, usage };
         }
         return { success: false, error: "No text in response" };
       }
@@ -503,7 +548,15 @@ export class MistralOCRClient {
           }
         }
 
-        return { success: true, data: { markdown, images } };
+        // Parse usage from Mistral OCR response
+        const rawUsage = data.usage;
+        const usage: TokenUsage | undefined = rawUsage ? {
+          promptTokens: rawUsage.prompt_tokens || 0,
+          completionTokens: rawUsage.completion_tokens || 0,
+          totalTokens: rawUsage.total_tokens || 0,
+        } : undefined;
+
+        return { success: true, data: { markdown, images }, usage };
       }
 
       return { success: false, error: `HTTP ${response.status}: ${response.text}` };

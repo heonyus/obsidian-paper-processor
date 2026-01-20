@@ -4,10 +4,13 @@ import { ArxivSearchService, ArxivPaper, ARXIV_CATEGORIES } from "../services/ar
 import { OCRService } from "../services/ocr";
 import { TranslatorService } from "../services/translator";
 import { BlogGeneratorService } from "../services/blog-generator";
+import { getUsageTracker } from "../services/usage-tracker";
+import { formatCost, formatTokens } from "../utils/pricing-table";
+import type { SessionUsageStats } from "../types/usage";
 
 export const VIEW_TYPE_PAPER_PROCESSOR = "paper-processor-view";
 
-type TabType = "search" | "process" | "papers";
+type TabType = "search" | "process" | "papers" | "usage";
 
 export class PaperProcessorView extends ItemView {
   plugin: PaperProcessorPlugin;
@@ -86,6 +89,7 @@ export class PaperProcessorView extends ItemView {
       { id: "search", label: "Search", icon: "search" },
       { id: "process", label: "Process", icon: "file-plus" },
       { id: "papers", label: "Papers", icon: "library" },
+      { id: "usage", label: "Usage", icon: "bar-chart" },
     ];
 
     tabs.forEach((tab) => {
@@ -118,6 +122,9 @@ export class PaperProcessorView extends ItemView {
         break;
       case "papers":
         this.renderPapersTab();
+        break;
+      case "usage":
+        this.renderUsageTab();
         break;
     }
   }
@@ -555,31 +562,41 @@ export class PaperProcessorView extends ItemView {
     this.currentStep = "";
     this.currentOutputFolder = null;
 
+    // Create job-specific logger to tag all messages with filename
+    const jobTag = pdfFile.basename.substring(0, 20) + (pdfFile.basename.length > 20 ? "..." : "");
+    const jobLog = (msg: string) => this.addLog(`[${jobTag}] ${msg}`);
+
     // Add separator if there are existing logs from other jobs
     if (this.processLogs.length > 0) {
       this.addLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     }
-    this.addLog(`🚀 Processing started: ${pdfFile.basename}`);
+    jobLog(`🚀 Processing started`);
     this.renderCurrentTab();
 
     try {
       // ===== Step 1: OCR =====
-      this.updateProgress(5, "Step 1/3: OCR Processing");
-      this.addLog("📄 Starting OCR...");
+      this.updateProgress(5, `Step 1/3: OCR - ${jobTag}`);
+      jobLog("📄 Starting OCR...");
 
       const ocrService = new OCRService(this.app, this.plugin.settings);
       ocrService.setProgressCallback((p) => {
-        this.addLog(`  [OCR] ${p.message}`);
+        jobLog(`[OCR] ${p.message}`);
         this.updateProgress(5 + p.percent * 0.3, `Step 1/3: ${p.message}`);
       });
 
       const ocrResult = await ocrService.processPDF(pdfFile);
 
       if (!ocrResult.success || !ocrResult.outputFolder) {
-        this.addLog(`❌ OCR failed: ${ocrResult.error}`);
+        jobLog(`❌ OCR failed: ${ocrResult.error}`);
         throw new Error(`OCR failed: ${ocrResult.error}`);
       }
-      this.addLog(`✅ OCR complete → ${ocrResult.outputFolder}`);
+      jobLog(`✅ OCR complete → ${ocrResult.outputFolder}`);
+
+      // Update job's output folder
+      const job = this.processingJobs.get(pdfPath);
+      if (job) {
+        job.outputFolder = ocrResult.outputFolder;
+      }
       this.currentOutputFolder = ocrResult.outputFolder;
       this.renderCurrentTab(); // Re-render to show file buttons
 
@@ -588,27 +605,27 @@ export class PaperProcessorView extends ItemView {
       const runBlog = this.processOptions.blog;
 
       if (runTranslation || runBlog) {
-        this.updateProgress(35, "Step 2-3: Translation & Blog (Parallel)");
+        this.updateProgress(35, `Step 2-3: Translation & Blog - ${jobTag}`);
 
         const tasks: Promise<void>[] = [];
 
         // Translation task
         if (runTranslation) {
-          this.addLog("🌐 [Parallel] Starting translation...");
+          jobLog("🌐 [Parallel] Starting translation...");
           const translationTask = (async () => {
             const translatorService = new TranslatorService(this.app, this.plugin.settings);
             translatorService.setProgressCallback((p) => {
               const pageInfo = p.currentPage && p.totalPages ? ` (${p.currentPage}/${p.totalPages})` : "";
-              this.addLog(`  [Trans] ${p.message}${pageInfo}`);
+              jobLog(`[Trans] ${p.message}${pageInfo}`);
             });
 
             const originalFile = this.app.vault.getAbstractFileByPath(`${ocrResult.outputFolder}/original.md`);
             if (originalFile instanceof TFile) {
               const translateResult = await translatorService.translate(originalFile, ocrResult.outputFolder!);
               if (!translateResult.success) {
-                this.addLog(`⚠️ Translation warning: ${translateResult.error}`);
+                jobLog(`⚠️ Translation warning: ${translateResult.error}`);
               } else {
-                this.addLog("✅ Translation complete → translated_raw.md");
+                jobLog("✅ Translation complete → translated_raw.md");
               }
             }
           })();
@@ -617,18 +634,18 @@ export class PaperProcessorView extends ItemView {
 
         // Blog task (runs in parallel with translation)
         if (runBlog) {
-          this.addLog("📝 [Parallel] Starting blog generation...");
+          jobLog("📝 [Parallel] Starting blog generation...");
           const blogTask = (async () => {
             const blogService = new BlogGeneratorService(this.app, this.plugin.settings);
             blogService.setProgressCallback((p) => {
-              this.addLog(`  [Blog] ${p.message}`);
+              jobLog(`[Blog] ${p.message}`);
             });
 
             const blogResult = await blogService.generate(ocrResult.outputFolder!);
             if (!blogResult.success) {
-              this.addLog(`⚠️ Blog warning: ${blogResult.error}`);
+              jobLog(`⚠️ Blog warning: ${blogResult.error}`);
             } else {
-              this.addLog("✅ Blog complete → blog.md");
+              jobLog("✅ Blog complete → blog.md");
             }
           })();
           tasks.push(blogTask);
@@ -637,21 +654,21 @@ export class PaperProcessorView extends ItemView {
         // Wait for all tasks to complete
         await Promise.all(tasks);
       } else {
-        this.addLog("⏭️ Translation & Blog skipped (disabled)");
+        jobLog("⏭️ Translation & Blog skipped (disabled)");
       }
 
       // ===== Complete =====
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       this.updateProgress(100, "Complete!");
-      this.addLog(`🎉 All processing complete! (${elapsed}s)`);
-      this.addLog(`📁 Output: ${ocrResult.outputFolder}`);
+      jobLog(`🎉 All processing complete! (${elapsed}s)`);
+      jobLog(`📁 Output: ${ocrResult.outputFolder}`);
 
-      this.showNotice("Processing complete!");
+      this.showNotice(`Processing complete: ${jobTag}`);
       this.selectedPdfPath = null;
 
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      this.addLog(`❌ Error: ${errorMsg}`);
+      jobLog(`❌ Error: ${errorMsg}`);
       this.showNotice(`Error: ${errorMsg}`);
     } finally {
       // Remove this job from processing map
@@ -758,5 +775,114 @@ export class PaperProcessorView extends ItemView {
 
   private showNotice(message: string): void {
     new Notice(message);
+  }
+
+  // ==================== Usage Tab ====================
+
+  private renderUsageTab(): void {
+    const container = this.contentContainer;
+    const stats = getUsageTracker().getSessionStats();
+
+    // Header
+    container.createEl("div", { cls: "pp-usage-header" }).createEl("h3", {
+      text: "API Usage Statistics",
+      cls: "pp-usage-title",
+    });
+
+    // Total cost summary card
+    const summaryCard = container.createEl("div", { cls: "pp-usage-summary-card" });
+    const totalCostEl = summaryCard.createEl("div", { cls: "pp-usage-total-cost" });
+    totalCostEl.createEl("span", { cls: "pp-usage-cost-label", text: "Session Total" });
+    totalCostEl.createEl("span", { cls: "pp-usage-cost-value", text: formatCost(stats.totalCost) });
+
+    // Token stats row
+    const tokenRow = summaryCard.createEl("div", { cls: "pp-usage-token-row" });
+    tokenRow.createEl("div", { cls: "pp-usage-stat" }).innerHTML =
+      `<span class="pp-usage-stat-label">Input</span><span class="pp-usage-stat-value">${formatTokens(stats.totalInputTokens)}</span>`;
+    tokenRow.createEl("div", { cls: "pp-usage-stat" }).innerHTML =
+      `<span class="pp-usage-stat-label">Output</span><span class="pp-usage-stat-value">${formatTokens(stats.totalOutputTokens)}</span>`;
+    tokenRow.createEl("div", { cls: "pp-usage-stat" }).innerHTML =
+      `<span class="pp-usage-stat-label">Calls</span><span class="pp-usage-stat-value">${stats.totalCalls}</span>`;
+
+    // Session duration
+    const duration = Math.round((Date.now() - stats.sessionStartTime) / 60000);
+    summaryCard.createEl("div", { cls: "pp-usage-session-time", text: `Session: ${duration} min` });
+
+    // Provider breakdown
+    if (Object.keys(stats.byProvider).length > 0) {
+      const providerSection = container.createEl("div", { cls: "pp-usage-section" });
+      providerSection.createEl("h4", { text: "By Provider", cls: "pp-usage-section-title" });
+
+      const providerTable = providerSection.createEl("table", { cls: "pp-usage-table" });
+      const thead = providerTable.createEl("thead");
+      const headerRow = thead.createEl("tr");
+      headerRow.createEl("th", { text: "Provider" });
+      headerRow.createEl("th", { text: "Input" });
+      headerRow.createEl("th", { text: "Output" });
+      headerRow.createEl("th", { text: "Cost" });
+      headerRow.createEl("th", { text: "Calls" });
+
+      const tbody = providerTable.createEl("tbody");
+      for (const [provider, data] of Object.entries(stats.byProvider)) {
+        const row = tbody.createEl("tr");
+        row.createEl("td", { text: provider });
+        row.createEl("td", { text: formatTokens(data.input) });
+        row.createEl("td", { text: formatTokens(data.output) });
+        row.createEl("td", { text: formatCost(data.cost), cls: "pp-usage-cost-cell" });
+        row.createEl("td", { text: String(data.calls) });
+      }
+    }
+
+    // Feature breakdown
+    if (Object.keys(stats.byFeature).length > 0) {
+      const featureSection = container.createEl("div", { cls: "pp-usage-section" });
+      featureSection.createEl("h4", { text: "By Feature", cls: "pp-usage-section-title" });
+
+      const featureCards = featureSection.createEl("div", { cls: "pp-usage-feature-cards" });
+
+      const featureLabels: Record<string, { icon: string; label: string }> = {
+        ocr: { icon: "📄", label: "OCR" },
+        translation: { icon: "🌐", label: "Translation" },
+        blog: { icon: "📝", label: "Blog" },
+      };
+
+      for (const [feature, data] of Object.entries(stats.byFeature)) {
+        const featureInfo = featureLabels[feature] || { icon: "📊", label: feature };
+        const card = featureCards.createEl("div", { cls: "pp-usage-feature-card" });
+
+        card.createEl("div", { cls: "pp-usage-feature-header" }).innerHTML =
+          `<span class="pp-usage-feature-icon">${featureInfo.icon}</span>` +
+          `<span class="pp-usage-feature-name">${featureInfo.label}</span>`;
+
+        card.createEl("div", { cls: "pp-usage-feature-cost", text: formatCost(data.cost) });
+
+        const detailsEl = card.createEl("div", { cls: "pp-usage-feature-details" });
+        detailsEl.createEl("span", { text: `${formatTokens(data.input + data.output)} tokens` });
+        detailsEl.createEl("span", { text: `${data.calls} calls` });
+      }
+    }
+
+    // Empty state
+    if (stats.totalCalls === 0) {
+      container.createEl("div", { cls: "pp-usage-empty" }).innerHTML =
+        `<div class="pp-usage-empty-icon">📊</div>` +
+        `<div class="pp-usage-empty-text">No API usage in this session yet.</div>` +
+        `<div class="pp-usage-empty-hint">Process a paper to see usage statistics.</div>`;
+    }
+
+    // Reset button
+    const actionsArea = container.createEl("div", { cls: "pp-usage-actions" });
+    const resetBtn = actionsArea.createEl("button", {
+      cls: "pp-btn pp-btn-secondary",
+      text: "Reset Session",
+    });
+    this.registerDomEvent(resetBtn, "click", () => {
+      getUsageTracker().resetSession();
+      this.renderCurrentTab();
+      this.showNotice("Usage statistics reset");
+    });
+
+    // Auto-refresh hint
+    actionsArea.createEl("span", { cls: "pp-usage-hint", text: "Statistics update in real-time" });
   }
 }
