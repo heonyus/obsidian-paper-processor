@@ -62,7 +62,8 @@ export class ApiClient {
       console.error(`[API] Exception: ${errorMessage}`);
       // requestUrl 에러 상세 출력
       if (error && typeof error === 'object' && 'status' in error) {
-        console.error(`[API] Request failed with status: ${(error as any).status}`);
+        const errorWithStatus = error as { status: unknown };
+        console.error(`[API] Request failed with status: ${errorWithStatus.status}`);
       }
       return { success: false, error: errorMessage };
     }

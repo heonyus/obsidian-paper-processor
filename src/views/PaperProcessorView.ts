@@ -334,7 +334,7 @@ export class PaperProcessorView extends ItemView {
 
     // Process options
     const optionsContainer = container.createEl("div", { cls: "pp-options" });
-    optionsContainer.createEl("h4", { text: "Processing Options" });
+    optionsContainer.createEl("h4", { text: "Processing options" });
 
     // Get language code for display
     const langMap: Record<string, string> = {
@@ -489,7 +489,7 @@ export class PaperProcessorView extends ItemView {
         super(app);
         this.onSelect = onSelect;
 
-        this.contentEl.createEl("h2", { text: "Select PDF" });
+        this.contentEl.createEl("h2", { text: "Select PDF file" });
 
         const list = this.contentEl.createEl("div", { cls: "pp-file-list" });
         files.forEach((file) => {
@@ -785,14 +785,14 @@ export class PaperProcessorView extends ItemView {
 
     // Header
     container.createEl("div", { cls: "pp-usage-header" }).createEl("h3", {
-      text: "API Usage Statistics",
+      text: "API usage statistics",
       cls: "pp-usage-title",
     });
 
     // Total cost summary card
     const summaryCard = container.createEl("div", { cls: "pp-usage-summary-card" });
     const totalCostEl = summaryCard.createEl("div", { cls: "pp-usage-total-cost" });
-    totalCostEl.createEl("span", { cls: "pp-usage-cost-label", text: "Session Total" });
+    totalCostEl.createEl("span", { cls: "pp-usage-cost-label", text: "Session total" });
     totalCostEl.createEl("span", { cls: "pp-usage-cost-value", text: formatCost(stats.totalCost) });
 
     // Token stats row
@@ -811,7 +811,7 @@ export class PaperProcessorView extends ItemView {
     // Provider breakdown
     if (Object.keys(stats.byProvider).length > 0) {
       const providerSection = container.createEl("div", { cls: "pp-usage-section" });
-      providerSection.createEl("h4", { text: "By Provider", cls: "pp-usage-section-title" });
+      providerSection.createEl("h4", { text: "By provider", cls: "pp-usage-section-title" });
 
       const providerTable = providerSection.createEl("table", { cls: "pp-usage-table" });
       const thead = providerTable.createEl("thead");
@@ -836,7 +836,7 @@ export class PaperProcessorView extends ItemView {
     // Feature breakdown
     if (Object.keys(stats.byFeature).length > 0) {
       const featureSection = container.createEl("div", { cls: "pp-usage-section" });
-      featureSection.createEl("h4", { text: "By Feature", cls: "pp-usage-section-title" });
+      featureSection.createEl("h4", { text: "By feature", cls: "pp-usage-section-title" });
 
       const featureCards = featureSection.createEl("div", { cls: "pp-usage-feature-cards" });
 
@@ -874,7 +874,7 @@ export class PaperProcessorView extends ItemView {
     const actionsArea = container.createEl("div", { cls: "pp-usage-actions" });
     const resetBtn = actionsArea.createEl("button", {
       cls: "pp-btn pp-btn-secondary",
-      text: "Reset Session",
+      text: "Reset session",
     });
     this.registerDomEvent(resetBtn, "click", () => {
       getUsageTracker().resetSession();

@@ -28,6 +28,37 @@ export interface ArxivSearchOptions {
   sortBy?: "submittedDate" | "relevance" | "lastUpdatedDate";
 }
 
+// OpenAlex API 응답 타입 정의
+interface OpenAlexLocation {
+  source?: { display_name?: string };
+  landing_page_url?: string;
+  pdf_url?: string;
+}
+
+interface OpenAlexAuthorship {
+  author?: { display_name?: string };
+}
+
+interface OpenAlexTopic {
+  display_name?: string;
+}
+
+interface OpenAlexWork {
+  id?: string;
+  title?: string;
+  doi?: string;
+  publication_date?: string;
+  updated_date?: string;
+  abstract_inverted_index?: Record<string, number[]>;
+  authorships?: OpenAlexAuthorship[];
+  locations?: OpenAlexLocation[];
+  primary_location?: OpenAlexLocation;
+  best_oa_location?: OpenAlexLocation;
+  topics?: OpenAlexTopic[];
+  primary_topic?: OpenAlexTopic;
+  ids?: { openalex?: string };
+}
+
 // arXiv ID 패턴 (여러 형식 지원)
 const ARXIV_ID_PATTERNS = [
   // URL: https://arxiv.org/abs/2312.12345
@@ -242,7 +273,7 @@ export class ArxivSearchService {
   /**
    * OpenAlex 작업에서 arXiv ID 추출
    */
-  private extractArxivIdFromOpenAlex(work: any): string | null {
+  private extractArxivIdFromOpenAlex(work: OpenAlexWork): string | null {
     // locations에서 arXiv 찾기
     for (const location of work.locations || []) {
       if (location.source?.display_name?.toLowerCase().includes("arxiv")) {
@@ -267,12 +298,12 @@ export class ArxivSearchService {
   /**
    * OpenAlex 작업을 ArxivPaper 형식으로 변환
    */
-  private parseOpenAlexWork(work: any): ArxivPaper | null {
+  private parseOpenAlexWork(work: OpenAlexWork): ArxivPaper | null {
     if (!work.title) return null;
 
     const authors = (work.authorships || [])
-      .map((a: any) => a.author?.display_name)
-      .filter(Boolean);
+      .map((a: OpenAlexAuthorship) => a.author?.display_name)
+      .filter((name): name is string => Boolean(name));
 
     // primary_location 또는 best_oa_location에서 URL 추출
     const location = work.primary_location || work.best_oa_location || {};
@@ -292,10 +323,10 @@ export class ArxivSearchService {
       arxivId: arxivId || `openalex:${work.id?.split("/").pop() || "unknown"}`,
       title: work.title,
       authors,
-      abstract: this.reconstructAbstract(work.abstract_inverted_index) || "",
+      abstract: this.reconstructAbstract(work.abstract_inverted_index ?? null) || "",
       published: work.publication_date || "",
       updated: work.updated_date || work.publication_date || "",
-      categories: (work.topics || []).slice(0, 3).map((t: any) => t.display_name),
+      categories: (work.topics || []).slice(0, 3).map((t: OpenAlexTopic) => t.display_name).filter((name): name is string => Boolean(name)),
       primaryCategory: work.primary_topic?.display_name || "",
       pdfUrl: pdfUrl,
       arxivUrl: arxivId ? `https://arxiv.org/abs/${arxivId}` : landingUrl,
