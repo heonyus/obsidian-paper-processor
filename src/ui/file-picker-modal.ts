@@ -1,4 +1,4 @@
-import { App, Modal, TFile, TFolder, FuzzySuggestModal, SuggestModal } from "obsidian";
+import { App, TFile, TFolder, FuzzySuggestModal, SuggestModal } from "obsidian";
 
 /**
  * Modal for picking a PDF file

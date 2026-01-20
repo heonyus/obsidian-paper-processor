@@ -25,25 +25,25 @@ export default class PaperProcessorPlugin extends Plugin {
     // ===== OCR Command =====
     this.addCommand({
       id: "ocr-pdf",
-      name: "OCR: Convert PDF to Markdown",
-      callback: () => this.runOCR(),
+      name: "Convert PDF to Markdown (OCR)",
+      callback: () => { void this.runOCR(); },
     });
 
     // ===== Translation Commands =====
     this.addCommand({
       id: "translate-paper",
-      name: "Translate: Translate paper to Korean",
-      callback: () => this.runTranslation(),
+      name: "Translate paper",
+      callback: () => { void this.runTranslation(); },
     });
 
     this.addCommand({
       id: "translate-current-file",
-      name: "Translate: Translate current file",
+      name: "Translate current file",
       checkCallback: (checking: boolean) => {
         const file = this.app.workspace.getActiveFile();
         if (file && file.extension === "md") {
           if (!checking) {
-            this.translateCurrentFile(file);
+            void this.translateCurrentFile(file);
           }
           return true;
         }
@@ -54,27 +54,27 @@ export default class PaperProcessorPlugin extends Plugin {
     // ===== Blog Generation Commands =====
     this.addCommand({
       id: "generate-blog",
-      name: "Blog: Generate blog post from paper",
-      callback: () => this.runBlogGeneration(),
+      name: "Generate blog post from paper",
+      callback: () => { void this.runBlogGeneration(); },
     });
 
     // ===== Full Pipeline Command =====
     this.addCommand({
       id: "full-pipeline",
-      name: "Full Pipeline: OCR → Translate → Blog",
-      callback: () => this.runFullPipeline(),
+      name: "Run full pipeline (OCR → translate → blog)",
+      callback: () => { void this.runFullPipeline(); },
     });
 
     // ===== Sidebar Command =====
     this.addCommand({
       id: "open-sidebar",
-      name: "Open Paper Processor Sidebar",
-      callback: () => this.activateSidebar(),
+      name: "Open sidebar",
+      callback: () => { void this.activateSidebar(); },
     });
 
     // Add ribbon icon - opens sidebar
     this.addRibbonIcon("file-text", "Paper Processor", () => {
-      this.activateSidebar();
+      void this.activateSidebar();
     });
 
     // Register context menu for PDF files
@@ -83,30 +83,27 @@ export default class PaperProcessorPlugin extends Plugin {
         if (file instanceof TFile && file.extension === "pdf") {
           menu.addItem((item) => {
             item
-              .setTitle("OCR this PDF")
+              .setTitle("Convert to Markdown (OCR)")
               .setIcon("file-text")
-              .onClick(() => this.ocrFile(file));
+              .onClick(() => { void this.ocrFile(file); });
           });
         }
 
         if (file instanceof TFile && file.extension === "md") {
           menu.addItem((item) => {
             item
-              .setTitle("Translate this file")
+              .setTitle("Translate")
               .setIcon("languages")
-              .onClick(() => this.translateCurrentFile(file));
+              .onClick(() => { void this.translateCurrentFile(file); });
           });
         }
       })
     );
 
-    console.log("Paper Processor plugin loaded");
   }
 
   onunload() {
-    // Detach sidebar view
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_PAPER_PROCESSOR);
-    console.log("Paper Processor plugin unloaded");
+    // View cleanup is handled automatically by Obsidian
   }
 
   // ===== Sidebar =====
@@ -136,13 +133,13 @@ export default class PaperProcessorPlugin extends Plugin {
 
   // ===== OCR =====
 
-  private async runOCR() {
+  private runOCR(): void {
     if (!this.settings.mistralApiKey) {
-      new Notice("Please configure Mistral API key in settings first");
+      new Notice("Please configure Mistral API key in settings first.");
       return;
     }
 
-    new PDFPickerModal(this.app, (file) => this.ocrFile(file)).open();
+    new PDFPickerModal(this.app, (file) => { void this.ocrFile(file); }).open();
   }
 
   private async ocrFile(file: TFile) {
@@ -165,14 +162,14 @@ export default class PaperProcessorPlugin extends Plugin {
 
   // ===== Translation =====
 
-  private async runTranslation() {
+  private runTranslation(): void {
     if (!this.settings.grokApiKey) {
-      new Notice("Please configure Grok API key in settings first");
+      new Notice("Please configure Grok API key in settings first.");
       return;
     }
 
     new MarkdownPickerModal(this.app, this.settings.outputFolder, (file) => {
-      this.translateFile(file);
+      void this.translateFile(file);
     }).open();
   }
 
@@ -208,14 +205,14 @@ export default class PaperProcessorPlugin extends Plugin {
 
   // ===== Blog Generation =====
 
-  private async runBlogGeneration() {
+  private runBlogGeneration(): void {
     if (!this.settings.geminiApiKey) {
-      new Notice("Please configure Gemini API key in settings first");
+      new Notice("Please configure Gemini API key in settings first.");
       return;
     }
 
     new PaperFolderPickerModal(this.app, this.settings.outputFolder, (folder) => {
-      this.generateBlog(folder);
+      void this.generateBlog(folder);
     }).open();
   }
 
@@ -239,7 +236,7 @@ export default class PaperProcessorPlugin extends Plugin {
 
   // ===== Full Pipeline =====
 
-  private async runFullPipeline() {
+  private runFullPipeline(): void {
     // Check all API keys
     const missingKeys: string[] = [];
     if (!this.settings.mistralApiKey) missingKeys.push("Mistral (OCR)");
@@ -250,65 +247,69 @@ export default class PaperProcessorPlugin extends Plugin {
       return;
     }
 
-    new PDFPickerModal(this.app, async (file) => {
-      const progress = new ProgressModal(this.app, "Full Pipeline");
-      progress.open();
-
-      try {
-        // Step 1: OCR
-        progress.updateTitle("Step 1/3: OCR");
-        const ocrService = new OCRService(this.app, this.settings);
-        ocrService.setProgressCallback((p) => {
-          progress.setProgress(p.percent * 0.33, `[OCR] ${p.message}`);
-        });
-
-        const ocrResult = await ocrService.processPDF(file);
-        if (!ocrResult.success || !ocrResult.outputFolder) {
-          progress.error(`OCR failed: ${ocrResult.error}`);
-          return;
-        }
-
-        // Step 2: Translation
-        progress.updateTitle("Step 2/3: Translation");
-        const translatorService = new TranslatorService(this.app, this.settings);
-        translatorService.setProgressCallback((p) => {
-          progress.setProgress(33 + p.percent * 0.33, `[Translation] ${p.message}`);
-        });
-
-        const originalFile = this.app.vault.getAbstractFileByPath(`${ocrResult.outputFolder}/original.md`);
-        if (!(originalFile instanceof TFile)) {
-          progress.error("Could not find original.md after OCR");
-          return;
-        }
-
-        const translateResult = await translatorService.translate(originalFile, ocrResult.outputFolder);
-        if (!translateResult.success) {
-          progress.error(`Translation failed: ${translateResult.error}`);
-          return;
-        }
-
-        // Step 3: Blog Generation (conditional)
-        if (this.settings.enableBlog) {
-          progress.updateTitle("Step 3/3: Blog Generation");
-          const blogService = new BlogGeneratorService(this.app, this.settings);
-          blogService.setProgressCallback((p) => {
-            progress.setProgress(66 + p.percent * 0.34, `[Blog] ${p.message}`);
-          });
-
-          const blogResult = await blogService.generate(ocrResult.outputFolder);
-          if (!blogResult.success) {
-            progress.addLog(`Blog generation warning: ${blogResult.error}`);
-          }
-        } else {
-          progress.addLog("Blog generation skipped (disabled in settings)");
-          progress.setProgress(100, "Blog generation skipped");
-        }
-
-        progress.complete(`Full pipeline complete!\nOutput: ${ocrResult.outputFolder}`);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        progress.error(errorMessage);
-      }
+    new PDFPickerModal(this.app, (file) => {
+      void this.executeFullPipeline(file);
     }).open();
+  }
+
+  private async executeFullPipeline(file: TFile): Promise<void> {
+    const progress = new ProgressModal(this.app, "Full pipeline");
+    progress.open();
+
+    try {
+      // Step 1: OCR
+      progress.updateTitle("Step 1/3: OCR");
+      const ocrService = new OCRService(this.app, this.settings);
+      ocrService.setProgressCallback((p) => {
+        progress.setProgress(p.percent * 0.33, `[OCR] ${p.message}`);
+      });
+
+      const ocrResult = await ocrService.processPDF(file);
+      if (!ocrResult.success || !ocrResult.outputFolder) {
+        progress.error(`OCR failed: ${ocrResult.error}`);
+        return;
+      }
+
+      // Step 2: Translation
+      progress.updateTitle("Step 2/3: Translation");
+      const translatorService = new TranslatorService(this.app, this.settings);
+      translatorService.setProgressCallback((p) => {
+        progress.setProgress(33 + p.percent * 0.33, `[Translation] ${p.message}`);
+      });
+
+      const originalFile = this.app.vault.getAbstractFileByPath(`${ocrResult.outputFolder}/original.md`);
+      if (!(originalFile instanceof TFile)) {
+        progress.error("Could not find original.md after OCR.");
+        return;
+      }
+
+      const translateResult = await translatorService.translate(originalFile, ocrResult.outputFolder);
+      if (!translateResult.success) {
+        progress.error(`Translation failed: ${translateResult.error}`);
+        return;
+      }
+
+      // Step 3: Blog Generation (conditional)
+      if (this.settings.enableBlog) {
+        progress.updateTitle("Step 3/3: Blog generation");
+        const blogService = new BlogGeneratorService(this.app, this.settings);
+        blogService.setProgressCallback((p) => {
+          progress.setProgress(66 + p.percent * 0.34, `[Blog] ${p.message}`);
+        });
+
+        const blogResult = await blogService.generate(ocrResult.outputFolder);
+        if (!blogResult.success) {
+          progress.addLog(`Blog generation warning: ${blogResult.error}`);
+        }
+      } else {
+        progress.addLog("Blog generation skipped (disabled in settings).");
+        progress.setProgress(100, "Blog generation skipped");
+      }
+
+      progress.complete(`Full pipeline complete!\nOutput: ${ocrResult.outputFolder}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      progress.error(errorMessage);
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { App, TFile, TFolder, Notice } from "obsidian";
+import { App, TFile } from "obsidian";
 import { MistralOCRClient, showError, showSuccess } from "../utils/api-client";
 import type { PaperProcessorSettings } from "../settings";
 
@@ -262,7 +262,7 @@ export class OCRService {
   private base64ToArrayBuffer(base64: string): ArrayBuffer {
     // Handle empty/null/undefined
     if (!base64 || typeof base64 !== "string" || base64.length === 0) {
-      console.log("base64ToArrayBuffer: invalid input");
+      console.debug("base64ToArrayBuffer: invalid input");
       return new ArrayBuffer(0);
     }
 
@@ -276,7 +276,7 @@ export class OCRService {
 
       // Handle empty after stripping prefix
       if (!cleanBase64 || cleanBase64.length === 0) {
-        console.log("base64ToArrayBuffer: empty after stripping prefix");
+        console.debug("base64ToArrayBuffer: empty after stripping prefix");
         return new ArrayBuffer(0);
       }
 
@@ -285,7 +285,7 @@ export class OCRService {
 
       // Handle empty after cleanup
       if (cleanBase64.length === 0) {
-        console.log("base64ToArrayBuffer: empty after cleanup");
+        console.debug("base64ToArrayBuffer: empty after cleanup");
         return new ArrayBuffer(0);
       }
 
@@ -304,7 +304,7 @@ export class OCRService {
       const bytes = this.decodeBase64Manual(cleanBase64);
 
       if (bytes.length === 0) {
-        console.log("base64ToArrayBuffer: decoded to empty");
+        console.debug("base64ToArrayBuffer: decoded to empty");
         return new ArrayBuffer(0);
       }
 

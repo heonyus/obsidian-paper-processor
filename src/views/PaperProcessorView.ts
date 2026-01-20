@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, TFolder, setIcon } from "obsidian";
+import { ItemView, WorkspaceLeaf, TFile, TFolder, setIcon, Modal, Notice, App } from "obsidian";
 import type PaperProcessorPlugin from "../main";
 import { ArxivSearchService, ArxivPaper, ARXIV_CATEGORIES } from "../services/arxiv-search";
 import { OCRService } from "../services/ocr";
@@ -474,11 +474,11 @@ export class PaperProcessorView extends ItemView {
     }
 
     // Create file picker modal
-    const modal = new (class extends (require("obsidian") as typeof import("obsidian")).Modal {
+    const modal = new (class extends Modal {
       result: TFile | null = null;
       onSelect: (file: TFile) => void;
 
-      constructor(app: import("obsidian").App, files: TFile[], onSelect: (file: TFile) => void) {
+      constructor(app: App, files: TFile[], onSelect: (file: TFile) => void) {
         super(app);
         this.onSelect = onSelect;
 
@@ -549,14 +549,18 @@ export class PaperProcessorView extends ItemView {
       startTime,
     });
 
-    // Reset current view state for this job
-    this.processLogs = [];
+    // DON'T reset logs - keep existing logs from other parallel jobs
+    // Only reset progress indicators for the overall view
     this.progressPercent = 0;
     this.currentStep = "";
     this.currentOutputFolder = null;
-    this.renderCurrentTab();
 
+    // Add separator if there are existing logs from other jobs
+    if (this.processLogs.length > 0) {
+      this.addLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    }
     this.addLog(`🚀 Processing started: ${pdfFile.basename}`);
+    this.renderCurrentTab();
 
     try {
       // ===== Step 1: OCR =====
@@ -753,6 +757,6 @@ export class PaperProcessorView extends ItemView {
   }
 
   private showNotice(message: string): void {
-    new (require("obsidian") as typeof import("obsidian")).Notice(message);
+    new Notice(message);
   }
 }

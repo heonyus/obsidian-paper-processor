@@ -108,12 +108,12 @@ export class ArxivSearchService {
 
       if (looksLikeTitle) {
         // 제목 검색은 OpenAlex를 먼저 시도 (더 나은 제목 매칭)
-        console.log("[ArxivSearch] Long title query detected, trying OpenAlex first...");
+        console.debug("[ArxivSearch] Long title query detected, trying OpenAlex first...");
         const openAlexResult = await this.searchViaOpenAlex(query, maxResults);
         if (openAlexResult.success && openAlexResult.papers && openAlexResult.papers.length > 0) {
           return openAlexResult;
         }
-        console.log("[ArxivSearch] OpenAlex returned no results, falling back to arXiv...");
+        console.debug("[ArxivSearch] OpenAlex returned no results, falling back to arXiv...");
       }
 
       // 키워드 검색
@@ -152,7 +152,7 @@ export class ArxivSearchService {
 
       // arXiv 결과가 없으면 OpenAlex fallback 시도
       if (papers.length === 0 && query.length > 10) {
-        console.log("[ArxivSearch] No arXiv results, trying OpenAlex fallback...");
+        console.debug("[ArxivSearch] No arXiv results, trying OpenAlex fallback...");
         const openAlexResult = await this.searchViaOpenAlex(query, maxResults);
         if (openAlexResult.success && openAlexResult.papers && openAlexResult.papers.length > 0) {
           return openAlexResult;

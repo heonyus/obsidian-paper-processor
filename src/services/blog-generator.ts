@@ -306,7 +306,7 @@ export class BlogGeneratorService {
       apiKey = this.settings.geminiApiKey;
     }
 
-    console.log(`[BlogGenerator] Model: ${model}, API: ${baseUrl}`);
+    console.debug(`[BlogGenerator] Model: ${model}, API: ${baseUrl}`);
     return new OpenAICompatibleClient(baseUrl, apiKey, model);
   }
 

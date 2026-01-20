@@ -1,9 +1,11 @@
 import { requestUrl, RequestUrlParam, Notice } from "obsidian";
+import type { TokenUsage } from "../types/usage";
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
+  usage?: TokenUsage;
 }
 
 /**
@@ -26,7 +28,7 @@ export class ApiClient {
   async post<T>(endpoint: string, body: unknown): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
-      console.log(`[API] POST ${url}`);
+      console.debug(`[API] POST ${url}`);
 
       const params: RequestUrlParam = {
         url,
@@ -37,7 +39,7 @@ export class ApiClient {
       };
 
       const response = await requestUrl(params);
-      console.log(`[API] Response status: ${response.status}`);
+      console.debug(`[API] Response status: ${response.status}`);
 
       if (response.status >= 200 && response.status < 300) {
         return { success: true, data: response.json as T };
@@ -257,7 +259,7 @@ export class GeminiClient {
         },
       };
 
-      console.log(`[Gemini] Multimodal request with ${images.length} images`);
+      console.debug(`[Gemini] Multimodal request with ${images.length} images`);
 
       const response = await requestUrl({
         url,
@@ -318,7 +320,7 @@ export class GeminiClient {
       };
 
       const imageCount = parts.filter(p => p.inlineData).length;
-      console.log(`[Gemini] Content generation with ${imageCount} images`);
+      console.debug(`[Gemini] Content generation with ${imageCount} images`);
 
       const response = await requestUrl({
         url,
@@ -398,7 +400,7 @@ export class GeminiClient {
         },
       };
 
-      console.log(`[Gemini] Interleaved multimodal request with ${imagesWithAnalysis.length} images`);
+      console.debug(`[Gemini] Interleaved multimodal request with ${imagesWithAnalysis.length} images`);
 
       const response = await requestUrl({
         url,

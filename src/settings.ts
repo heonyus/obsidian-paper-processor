@@ -78,15 +78,15 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     // ===== API Keys Section =====
-    containerEl.createEl("h2", { text: "API Keys" });
+    new Setting(containerEl).setName("API keys").setHeading();
     containerEl.createEl("p", {
       text: "Enter your API keys. These are stored locally and never sent anywhere except to the respective API services.",
       cls: "setting-item-description"
     });
 
     new Setting(containerEl)
-      .setName("Mistral API Key")
-      .setDesc("Required for OCR functionality (Mistral OCR)")
+      .setName("Mistral API key")
+      .setDesc("Required for OCR functionality (Mistral OCR).")
       .addText((text) =>
         text
           .setPlaceholder("Enter your Mistral API key")
@@ -98,8 +98,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("xAI Grok API Key")
-      .setDesc("For Grok models (grok-4.1, grok-4, etc.)")
+      .setName("xAI Grok API key")
+      .setDesc("For Grok models (grok-4.1, grok-4, etc.).")
       .addText((text) =>
         text
           .setPlaceholder("Enter your xAI API key")
@@ -111,8 +111,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("OpenAI API Key")
-      .setDesc("For GPT models (gpt-5.2, gpt-4o, etc.)")
+      .setName("OpenAI API key")
+      .setDesc("For GPT models (gpt-5.2, gpt-4o, etc.).")
       .addText((text) =>
         text
           .setPlaceholder("Enter your OpenAI API key")
@@ -124,8 +124,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Anthropic API Key")
-      .setDesc("For Claude models (claude-4.5-opus, claude-4.5-sonnet, etc.)")
+      .setName("Anthropic API key")
+      .setDesc("For Claude models (claude-4.5-opus, claude-4.5-sonnet, etc.).")
       .addText((text) =>
         text
           .setPlaceholder("Enter your Anthropic API key")
@@ -137,8 +137,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Google Gemini API Key")
-      .setDesc("For Gemini models (gemini-3.0-pro, gemini-3.0-flash, etc.)")
+      .setName("Google Gemini API key")
+      .setDesc("For Gemini models (gemini-3.0-pro, gemini-3.0-flash, etc.).")
       .addText((text) =>
         text
           .setPlaceholder("Enter your Google Gemini API key")
@@ -150,8 +150,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("DeepSeek API Key")
-      .setDesc("For DeepSeek models (deepseek-r1, deepseek-v3, etc.)")
+      .setName("DeepSeek API key")
+      .setDesc("For DeepSeek models (deepseek-r1, deepseek-v3, etc.).")
       .addText((text) =>
         text
           .setPlaceholder("Enter your DeepSeek API key")
@@ -163,8 +163,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Groq API Key")
-      .setDesc("For fast inference models via Groq")
+      .setName("Groq API key")
+      .setDesc("For fast inference models via Groq.")
       .addText((text) =>
         text
           .setPlaceholder("Enter your Groq API key")
@@ -176,11 +176,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     // ===== General Settings Section =====
-    containerEl.createEl("h2", { text: "General Settings" });
+    new Setting(containerEl).setName("General settings").setHeading();
 
     new Setting(containerEl)
-      .setName("Output Folder")
-      .setDesc("Folder where processed papers will be saved (relative to vault root)")
+      .setName("Output folder")
+      .setDesc("Folder where processed papers will be saved (relative to vault root).")
       .addText((text) =>
         text
           .setPlaceholder("papers")
@@ -192,11 +192,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     // ===== Model Settings Section =====
-    containerEl.createEl("h2", { text: "Model Settings" });
+    new Setting(containerEl).setName("Model settings").setHeading();
 
     new Setting(containerEl)
-      .setName("OCR Model")
-      .setDesc("Mistral model for OCR processing (fixed)")
+      .setName("OCR model")
+      .setDesc("Mistral model for OCR processing (fixed).")
       .addText((text) =>
         text
           .setValue(this.plugin.settings.ocrModel)
@@ -204,8 +204,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Translation Model")
-      .setDesc("Select AI model for translation (requires corresponding API key)")
+      .setName("Translation model")
+      .setDesc("Select AI model for translation (requires corresponding API key).")
       .addDropdown((dropdown) =>
         dropdown
           // xAI Grok models (latest)
@@ -238,8 +238,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Translation Language")
-      .setDesc("Target language for paper translation")
+      .setName("Translation language")
+      .setDesc("Target language for paper translation.")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("Korean", "Korean (한국어)")
@@ -260,8 +260,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Blog Model")
-      .setDesc("Select AI model for blog generation (requires corresponding API key)")
+      .setName("Blog model")
+      .setDesc("Select AI model for blog generation (requires corresponding API key).")
       .addDropdown((dropdown) =>
         dropdown
           // xAI Grok models (latest)
@@ -294,11 +294,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     // ===== Blog Settings Section =====
-    containerEl.createEl("h2", { text: "Blog Settings" });
+    new Setting(containerEl).setName("Blog settings").setHeading();
 
     new Setting(containerEl)
-      .setName("Enable Blog Generation")
-      .setDesc("Generate blog.md when running Full Pipeline")
+      .setName("Enable blog generation")
+      .setDesc("Generate blog.md when running full pipeline.")
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.enableBlog)
@@ -309,13 +309,13 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Blog Style")
-      .setDesc("Writing style for generated blog posts")
+      .setName("Blog style")
+      .setDesc("Writing style for generated blog posts.")
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("technical", "Technical (Detailed, academic)")
-          .addOption("summary", "Summary (Concise overview)")
-          .addOption("tutorial", "Tutorial (Step-by-step explanation)")
+          .addOption("technical", "Technical (detailed, academic)")
+          .addOption("summary", "Summary (concise overview)")
+          .addOption("tutorial", "Tutorial (step-by-step explanation)")
           .setValue(this.plugin.settings.blogStyle)
           .onChange(async (value: "technical" | "summary" | "tutorial") => {
             this.plugin.settings.blogStyle = value;
@@ -324,13 +324,13 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Blog Language")
-      .setDesc("Language for generated blog posts")
+      .setName("Blog language")
+      .setDesc("Language for generated blog posts.")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("ko", "Korean (한국어)")
           .addOption("en", "English")
-          .addOption("bilingual", "Bilingual (Both)")
+          .addOption("bilingual", "Bilingual (both)")
           .setValue(this.plugin.settings.blogLanguage)
           .onChange(async (value: "ko" | "en" | "bilingual") => {
             this.plugin.settings.blogLanguage = value;
@@ -339,14 +339,14 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     // ===== arXiv Settings Section =====
-    containerEl.createEl("h2", { text: "arXiv Settings" });
+    new Setting(containerEl).setName("arXiv settings").setHeading();
 
     new Setting(containerEl)
-      .setName("Default Category")
-      .setDesc("Default arXiv category filter for searches")
+      .setName("Default category")
+      .setDesc("Default arXiv category filter for searches.")
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("", "All Categories")
+          .addOption("", "All categories")
           .addOption("cs.AI", "Artificial Intelligence")
           .addOption("cs.CL", "Computation and Language (NLP)")
           .addOption("cs.CV", "Computer Vision")
@@ -361,8 +361,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Max Results")
-      .setDesc("Maximum number of search results to display (5-50)")
+      .setName("Max results")
+      .setDesc("Maximum number of search results to display (5-50).")
       .addSlider((slider) =>
         slider
           .setLimits(5, 50, 5)
@@ -375,16 +375,16 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     // ===== Sidebar Settings Section =====
-    containerEl.createEl("h2", { text: "Sidebar Settings" });
+    new Setting(containerEl).setName("Sidebar settings").setHeading();
 
     new Setting(containerEl)
-      .setName("Default Tab")
-      .setDesc("Which tab to show when opening the sidebar")
+      .setName("Default tab")
+      .setDesc("Which tab to show when opening the sidebar.")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("search", "Search (arXiv)")
           .addOption("process", "Process (PDF)")
-          .addOption("papers", "Papers (Library)")
+          .addOption("papers", "Papers (library)")
           .setValue(this.plugin.settings.sidebarDefaultTab)
           .onChange(async (value: "search" | "process" | "papers") => {
             this.plugin.settings.sidebarDefaultTab = value;

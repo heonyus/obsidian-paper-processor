@@ -1,9 +1,9 @@
 {
   "id": "paper-processor",
   "name": "Paper Processor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "1.0.0",
-  "description": "Academic paper processing: OCR, translation, blog generation, and slide creation with your own API keys.",
+  "description": "Academic paper processing: OCR, translation, and blog generation with your own API keys.",
   "author": "Jae Heon Jung",
   "authorUrl": "https://github.com/heonyus",
   "isDesktopOnly": true

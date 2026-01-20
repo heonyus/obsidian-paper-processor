@@ -300,7 +300,7 @@ export class TranslatorService {
       apiKey = this.settings.geminiApiKey;
     }
 
-    console.log(`[Translator] Model: ${model}, API: ${baseUrl}`);
+    console.debug(`[Translator] Model: ${model}, API: ${baseUrl}`);
     return new OpenAICompatibleClient(baseUrl, apiKey, model);
   }
 
