@@ -25,7 +25,7 @@ export default class PaperProcessorPlugin extends Plugin {
     // ===== OCR Command =====
     this.addCommand({
       id: "ocr-pdf",
-      name: "Convert PDF to Markdown (OCR)",
+      name: "Convert PDF to markdown (OCR)",
       callback: () => { void this.runOCR(); },
     });
 
@@ -83,7 +83,7 @@ export default class PaperProcessorPlugin extends Plugin {
         if (file instanceof TFile && file.extension === "pdf") {
           menu.addItem((item) => {
             item
-              .setTitle("Convert to Markdown (OCR)")
+              .setTitle("Convert to markdown (OCR)")
               .setIcon("file-text")
               .onClick(() => { void this.ocrFile(file); });
           });

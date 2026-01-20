@@ -53,9 +53,9 @@ export const DEFAULT_SETTINGS: PaperProcessorSettings = {
 
   // Model Settings
   ocrModel: "mistral-ocr-latest",
-  translationModel: "gemini-3-flash-preview",
+  translationModel: "gemini-2.5-flash-lite",
   translationLanguage: "Korean",
-  blogModel: "gemini-3-flash-preview",
+  blogModel: "gemini-2.5-flash-lite",
 
   // Blog Settings
   enableBlog: true,
@@ -233,7 +233,7 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           // Google Gemini models
           .addOption("gemini-3-pro-preview", "Gemini 3 Pro Preview (Google)")
           .addOption("gemini-3-flash-preview", "Gemini 3 Flash Preview (Google)")
-          .addOption("gemini-2.0-flash", "Gemini 2.0 Flash (Google)")
+          .addOption("gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite (Google)")
           // DeepSeek models
           .addOption("deepseek-r1", "DeepSeek R1 (DeepSeek)")
           .addOption("deepseek-v3", "DeepSeek V3 (DeepSeek)")
@@ -289,7 +289,7 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           // Google Gemini models
           .addOption("gemini-3-pro-preview", "Gemini 3 Pro Preview (Google)")
           .addOption("gemini-3-flash-preview", "Gemini 3 Flash Preview (Google)")
-          .addOption("gemini-2.0-flash", "Gemini 2.0 Flash (Google)")
+          .addOption("gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite (Google)")
           // DeepSeek models
           .addOption("deepseek-r1", "DeepSeek R1 (DeepSeek)")
           .addOption("deepseek-v3", "DeepSeek V3 (DeepSeek)")

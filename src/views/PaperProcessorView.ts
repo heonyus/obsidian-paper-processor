@@ -352,9 +352,9 @@ export class PaperProcessorView extends ItemView {
     const targetLang = langMap[this.plugin.settings.translationLanguage] || this.plugin.settings.translationLanguage;
 
     const options = [
-      { key: "ocr", label: "OCR (PDF to Markdown)", default: true },
+      { key: "ocr", label: "OCR (PDF to markdown)", default: true },
       { key: "translate", label: `Translation (EN → ${targetLang})`, default: true },
-      { key: "blog", label: "Blog Generation", default: this.plugin.settings.enableBlog },
+      { key: "blog", label: "Blog generation", default: this.plugin.settings.enableBlog },
     ];
 
     options.forEach((opt) => {
@@ -379,7 +379,7 @@ export class PaperProcessorView extends ItemView {
     const isCurrentFileProcessing = this.selectedPdfPath ? this.processingJobs.has(this.selectedPdfPath) : false;
     const processBtn = container.createEl("button", {
       cls: "pp-btn pp-btn-primary pp-btn-large",
-      text: isCurrentFileProcessing ? "Processing..." : "Process Paper",
+      text: isCurrentFileProcessing ? "Processing..." : "Process paper",
     });
 
     if (!this.selectedPdfPath || isCurrentFileProcessing) {
@@ -459,7 +459,7 @@ export class PaperProcessorView extends ItemView {
       if (!hasActiveJobs && this.processLogs.length > 0) {
         const clearBtn = progressArea.createEl("button", {
           cls: "pp-btn pp-btn-small pp-btn-secondary",
-          text: "Clear Logs"
+          text: "Clear logs"
         });
         this.registerDomEvent(clearBtn, "click", () => {
           this.processLogs = [];
@@ -867,10 +867,10 @@ export class PaperProcessorView extends ItemView {
 
     // Empty state
     if (stats.totalCalls === 0) {
-      container.createEl("div", { cls: "pp-usage-empty" }).innerHTML =
-        `<div class="pp-usage-empty-icon">📊</div>` +
-        `<div class="pp-usage-empty-text">No API usage in this session yet.</div>` +
-        `<div class="pp-usage-empty-hint">Process a paper to see usage statistics.</div>`;
+      const emptyEl = container.createEl("div", { cls: "pp-usage-empty" });
+      emptyEl.createEl("div", { cls: "pp-usage-empty-icon", text: "📊" });
+      emptyEl.createEl("div", { cls: "pp-usage-empty-text", text: "No API usage in this session yet." });
+      emptyEl.createEl("div", { cls: "pp-usage-empty-hint", text: "Process a paper to see usage statistics." });
     }
 
     // Reset button
