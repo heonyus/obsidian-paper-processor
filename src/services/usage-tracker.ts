@@ -1,5 +1,4 @@
-import type { App } from "obsidian";
-import type { TokenUsage, UsageCost, SessionUsageStats, ProviderStats, FeatureStats } from "../types/usage";
+import type { TokenUsage, UsageCost, SessionUsageStats } from "../types/usage";
 import { calculateCost, getProviderFromModel, formatCost, formatTokens } from "../utils/pricing-table";
 
 /**

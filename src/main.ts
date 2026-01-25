@@ -25,7 +25,7 @@ export default class PaperProcessorPlugin extends Plugin {
     // ===== OCR Command =====
     this.addCommand({
       id: "ocr-pdf",
-      name: "Convert PDF to markdown (OCR)",
+      name: "Convert PDF to Markdown (OCR)",
       callback: () => { void this.runOCR(); },
     });
 
@@ -61,19 +61,19 @@ export default class PaperProcessorPlugin extends Plugin {
     // ===== Full Pipeline Command =====
     this.addCommand({
       id: "full-pipeline",
-      name: "Run full pipeline (OCR → translate → blog)",
+      name: "Run full pipeline (OCR → Translate → Blog)",
       callback: () => { void this.runFullPipeline(); },
     });
 
     // ===== Sidebar Command =====
     this.addCommand({
       id: "open-sidebar",
-      name: "Open sidebar",
+      name: "Open Paper Processor sidebar",
       callback: () => { void this.activateSidebar(); },
     });
 
     // Add ribbon icon - opens sidebar
-    this.addRibbonIcon("file-text", "Paper Processor", () => {
+    this.addRibbonIcon("file-text", "Paper processor", () => {
       void this.activateSidebar();
     });
 
@@ -83,7 +83,7 @@ export default class PaperProcessorPlugin extends Plugin {
         if (file instanceof TFile && file.extension === "pdf") {
           menu.addItem((item) => {
             item
-              .setTitle("Convert to markdown (OCR)")
+              .setTitle("Convert to Markdown (OCR)")
               .setIcon("file-text")
               .onClick(() => { void this.ocrFile(file); });
           });
@@ -113,13 +113,13 @@ export default class PaperProcessorPlugin extends Plugin {
     this.app.workspace.detachLeavesOfType(VIEW_TYPE_PAPER_PROCESSOR);
 
     // Open in right sidebar
-    const rightLeaf = await this.app.workspace.getRightLeaf(false);
+    const rightLeaf = this.app.workspace.getRightLeaf(false);
     if (rightLeaf) {
       await rightLeaf.setViewState({
         type: VIEW_TYPE_PAPER_PROCESSOR,
         active: true,
       });
-      this.app.workspace.revealLeaf(rightLeaf);
+      void this.app.workspace.revealLeaf(rightLeaf);
     }
   }
 
@@ -135,7 +135,7 @@ export default class PaperProcessorPlugin extends Plugin {
 
   private runOCR(): void {
     if (!this.settings.mistralApiKey) {
-      new Notice("Please configure Mistral API key in settings first.");
+      new Notice("Please configure Mistral API key in settings first");
       return;
     }
 
@@ -164,7 +164,7 @@ export default class PaperProcessorPlugin extends Plugin {
 
   private runTranslation(): void {
     if (!this.settings.grokApiKey) {
-      new Notice("Please configure Grok API key in settings first.");
+      new Notice("Please configure Grok API key in settings first");
       return;
     }
 
@@ -207,7 +207,7 @@ export default class PaperProcessorPlugin extends Plugin {
 
   private runBlogGeneration(): void {
     if (!this.settings.geminiApiKey) {
-      new Notice("Please configure Gemini API key in settings first.");
+      new Notice("Please configure Gemini API key in settings first");
       return;
     }
 

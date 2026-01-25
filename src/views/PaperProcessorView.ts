@@ -6,7 +6,6 @@ import { TranslatorService } from "../services/translator";
 import { BlogGeneratorService } from "../services/blog-generator";
 import { getUsageTracker } from "../services/usage-tracker";
 import { formatCost, formatTokens } from "../utils/pricing-table";
-import type { SessionUsageStats } from "../types/usage";
 
 export const VIEW_TYPE_PAPER_PROCESSOR = "paper-processor-view";
 
@@ -57,7 +56,7 @@ export class PaperProcessorView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "Paper Processor";
+    return "Paper processor";
   }
 
   getIcon(): string {
@@ -65,6 +64,7 @@ export class PaperProcessorView extends ItemView {
   }
 
   async onOpen(): Promise<void> {
+    await Promise.resolve(); // Satisfy async requirement
     const container = this.containerEl.children[1];
     container.empty();
     container.addClass("paper-processor-view");
@@ -166,12 +166,12 @@ export class PaperProcessorView extends ItemView {
 
     this.registerDomEvent(searchInput, "keypress", (e) => {
       if (e.key === "Enter") {
-        this.performSearch();
+        void this.performSearch();
       }
     });
 
     this.registerDomEvent(searchBtn, "click", () => {
-      this.performSearch();
+      void this.performSearch();
     });
 
     this.registerDomEvent(categorySelect, "change", (e) => {
@@ -239,7 +239,7 @@ export class PaperProcessorView extends ItemView {
 
     const importBtn = actions.createEl("button", { cls: "pp-btn pp-btn-primary", text: "Import" });
     this.registerDomEvent(importBtn, "click", () => {
-      this.importPaper(paper);
+      void this.importPaper(paper);
     });
 
     const arxivLink = actions.createEl("a", {
@@ -387,7 +387,7 @@ export class PaperProcessorView extends ItemView {
     }
 
     this.registerDomEvent(processBtn, "click", () => {
-      this.processPaper();
+      void this.processPaper();
     });
 
     // Progress area (always show when processing or has logs)
@@ -435,7 +435,7 @@ export class PaperProcessorView extends ItemView {
             this.registerDomEvent(btn, "click", () => {
               const file = this.app.vault.getAbstractFileByPath(filePath);
               if (file instanceof TFile) {
-                this.app.workspace.getLeaf().openFile(file);
+                void this.app.workspace.getLeaf().openFile(file);
               }
             });
           } else {
@@ -705,7 +705,6 @@ export class PaperProcessorView extends ItemView {
 
     papersFolder.children.forEach((child) => {
       if (child instanceof TFolder) {
-        const metadataFile = this.app.vault.getAbstractFileByPath(`${child.path}/metadata.json`);
         papers.push({ folder: child, metadata: null });
       }
     });
@@ -768,7 +767,7 @@ export class PaperProcessorView extends ItemView {
       const filePath = files.translated ? `${folder.path}/translated_raw.md` : `${folder.path}/original.md`;
       const file = this.app.vault.getAbstractFileByPath(filePath);
       if (file instanceof TFile) {
-        this.app.workspace.getLeaf().openFile(file);
+        void this.app.workspace.getLeaf().openFile(file);
       }
     });
   }

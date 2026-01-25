@@ -1,10 +1,9 @@
 import { App, TFile, TFolder } from "obsidian";
-import { GeminiClient, OpenAICompatibleClient, ImageData, showError, showSuccess, ApiResponse } from "../utils/api-client";
+import { GeminiClient, OpenAICompatibleClient, ImageData, showError, showSuccess } from "../utils/api-client";
 import type { PaperProcessorSettings } from "../settings";
 import { arxivCategoriesToTags, extractTopicTags } from "../utils/obsidian-format";
 import { getUsageTracker } from "./usage-tracker";
-import { getProviderFromModel, formatCost, formatTokens } from "../utils/pricing-table";
-import type { TokenUsage } from "../types/usage";
+import { getProviderFromModel } from "../utils/pricing-table";
 
 export interface BlogResult {
   success: boolean;
@@ -957,15 +956,16 @@ Output in Korean markdown.`;
     return btoa(binary);
   }
 
-  private generateFrontmatter(metadata: Record<string, any> | null, content?: string): string {
+  private generateFrontmatter(metadata: Record<string, unknown> | null, content?: string): string {
     const now = new Date().toISOString().split("T")[0];
-    const title = metadata?.title || "Untitled Paper";
-    const titleKo = metadata?.title_ko || "";
+    const title = typeof metadata?.title === "string" ? metadata.title : "Untitled Paper";
+    const titleKo = typeof metadata?.title_ko === "string" ? metadata.title_ko : "";
+    const arxivId = typeof metadata?.arxiv_id === "string" ? metadata.arxiv_id : "";
 
     const tags = new Set<string>(["paper-review", this.settings.blogStyle]);
 
     if (metadata?.categories && Array.isArray(metadata.categories)) {
-      arxivCategoriesToTags(metadata.categories).forEach(t => tags.add(t.replace(/^#/, "")));
+      arxivCategoriesToTags(metadata.categories as string[]).forEach(t => tags.add(t.replace(/^#/, "")));
     }
     if (content) {
       extractTopicTags(content).forEach(t => tags.add(t.replace(/^#/, "")));
@@ -981,8 +981,8 @@ tags:
 ${Array.from(tags).map(t => `  - ${t}`).join("\n")}
 paper_title: "${this.escapeYaml(title)}"
 ${titleKo ? `paper_title_ko: "${this.escapeYaml(titleKo)}"` : ""}
-${metadata?.arxiv_id ? `arxiv_id: "${metadata.arxiv_id}"` : ""}
-${metadata?.arxiv_id ? `arxiv_url: "https://arxiv.org/abs/${metadata.arxiv_id}"` : ""}
+${arxivId ? `arxiv_id: "${arxivId}"` : ""}
+${arxivId ? `arxiv_url: "https://arxiv.org/abs/${arxivId}"` : ""}
 style: ${this.settings.blogStyle}
 language: ${this.settings.blogLanguage}
 generation_method: sequential

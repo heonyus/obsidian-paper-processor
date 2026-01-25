@@ -88,7 +88,7 @@ export class MarkdownPickerModal extends FuzzySuggestModal<TFile> {
     super(app);
     this.onChoose = onChoose;
     this.basePath = basePath;
-    this.setPlaceholder("Search for a markdown file to translate...");
+    this.setPlaceholder("Search for a Markdown file to translate...");
   }
 
   getItems(): TFile[] {

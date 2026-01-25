@@ -62,8 +62,8 @@ export class ApiClient {
       console.error(`[API] Exception: ${errorMessage}`);
       // requestUrl 에러 상세 출력
       if (error && typeof error === 'object' && 'status' in error) {
-        const errorWithStatus = error as { status: unknown };
-        console.error(`[API] Request failed with status: ${errorWithStatus.status}`);
+        const errorWithStatus = error as { status: number | string };
+        console.error(`[API] Request failed with status: ${String(errorWithStatus.status)}`);
       }
       return { success: false, error: errorMessage };
     }
@@ -494,13 +494,6 @@ export class MistralOCRClient {
     images: Array<{ id: string; data: string }>;
   }>> {
     try {
-      // Step 1: Upload file
-      const uploadUrl = `${this.baseUrl}/files`;
-      const formData = new FormData();
-      const blob = new Blob([pdfData], { type: "application/pdf" });
-      formData.append("file", blob, "document.pdf");
-      formData.append("purpose", "ocr");
-
       // Note: For file upload, we need to handle it differently
       // Obsidian's requestUrl doesn't support FormData directly
       // We'll use a different approach with base64 encoding
