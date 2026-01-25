@@ -1,7 +1,7 @@
 {
   "id": "paper-processor",
   "name": "Paper Processor",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "minAppVersion": "1.0.0",
   "description": "Academic paper processing: OCR, translation, and blog generation with your own API keys.",
   "author": "Jae Heon Jung",
