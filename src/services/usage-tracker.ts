@@ -1,5 +1,5 @@
 import type { TokenUsage, UsageCost, SessionUsageStats } from "../types/usage";
-import { calculateCost, getProviderFromModel, formatCost, formatTokens } from "../utils/pricing-table";
+import { calculateCost, formatCost, formatTokens } from "../utils/pricing-table";
 
 /**
  * Usage Tracker Service

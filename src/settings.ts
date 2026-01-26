@@ -227,19 +227,19 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           .addOption("gpt-5.2-mini", "GPT-5.2 mini (OpenAI)")
           .addOption("gpt-4o", "GPT-4o (OpenAI)")
           // Anthropic Claude models (latest: 4.5)
-          .addOption("claude-4.5-opus", "Claude 4.5 Opus (Anthropic)")
-          .addOption("claude-4.5-sonnet", "Claude 4.5 Sonnet (Anthropic)")
-          .addOption("claude-4.5-haiku", "Claude 4.5 Haiku (Anthropic)")
+          .addOption("claude-4.5-opus", "Claude 4.5 opus (Anthropic)")
+          .addOption("claude-4.5-sonnet", "Claude 4.5 sonnet (Anthropic)")
+          .addOption("claude-4.5-haiku", "Claude 4.5 haiku (Anthropic)")
           // Google Gemini models
-          .addOption("gemini-3-pro-preview", "Gemini 3 Pro preview (Google)")
-          .addOption("gemini-3-flash-preview", "Gemini 3 Flash preview (Google)")
-          .addOption("gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite (Google)")
+          .addOption("gemini-3-pro-preview", "Gemini 3 pro preview (Google)")
+          .addOption("gemini-3-flash-preview", "Gemini 3 flash preview (Google)")
+          .addOption("gemini-2.5-flash-lite", "Gemini 2.5 flash-lite (Google)")
           // DeepSeek models
           .addOption("deepseek-r1", "DeepSeek R1 (DeepSeek)")
           .addOption("deepseek-v3", "DeepSeek V3 (DeepSeek)")
           // Groq models (fast inference)
           .addOption("llama-3.3-70b-versatile", "Llama 3.3 70B (Groq)")
-          .addOption("deepseek-r1-distill-llama-70b", "DeepSeek R1 Distill 70B (Groq)")
+          .addOption("deepseek-r1-distill-llama-70b", "DeepSeek R1 distill 70B (Groq)")
           .setValue(this.plugin.settings.translationModel)
           .onChange(async (value) => {
             this.plugin.settings.translationModel = value;
@@ -283,19 +283,19 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           .addOption("gpt-5.2-mini", "GPT-5.2 mini (OpenAI)")
           .addOption("gpt-4o", "GPT-4o (OpenAI)")
           // Anthropic Claude models (latest: 4.5)
-          .addOption("claude-4.5-opus", "Claude 4.5 Opus (Anthropic)")
-          .addOption("claude-4.5-sonnet", "Claude 4.5 Sonnet (Anthropic)")
-          .addOption("claude-4.5-haiku", "Claude 4.5 Haiku (Anthropic)")
+          .addOption("claude-4.5-opus", "Claude 4.5 opus (Anthropic)")
+          .addOption("claude-4.5-sonnet", "Claude 4.5 sonnet (Anthropic)")
+          .addOption("claude-4.5-haiku", "Claude 4.5 haiku (Anthropic)")
           // Google Gemini models
-          .addOption("gemini-3-pro-preview", "Gemini 3 Pro preview (Google)")
-          .addOption("gemini-3-flash-preview", "Gemini 3 Flash preview (Google)")
-          .addOption("gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite (Google)")
+          .addOption("gemini-3-pro-preview", "Gemini 3 pro preview (Google)")
+          .addOption("gemini-3-flash-preview", "Gemini 3 flash preview (Google)")
+          .addOption("gemini-2.5-flash-lite", "Gemini 2.5 flash-lite (Google)")
           // DeepSeek models
           .addOption("deepseek-r1", "DeepSeek R1 (DeepSeek)")
           .addOption("deepseek-v3", "DeepSeek V3 (DeepSeek)")
           // Groq models (fast inference)
           .addOption("llama-3.3-70b-versatile", "Llama 3.3 70B (Groq)")
-          .addOption("deepseek-r1-distill-llama-70b", "DeepSeek R1 Distill 70B (Groq)")
+          .addOption("deepseek-r1-distill-llama-70b", "DeepSeek R1 distill 70B (Groq)")
           .setValue(this.plugin.settings.blogModel)
           .onChange(async (value) => {
             this.plugin.settings.blogModel = value;

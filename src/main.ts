@@ -25,7 +25,7 @@ export default class PaperProcessorPlugin extends Plugin {
     // ===== OCR Command =====
     this.addCommand({
       id: "ocr-pdf",
-      name: "Convert PDF to Markdown (OCR)",
+      name: "Convert PDF to markdown (OCR)",
       callback: () => { void this.runOCR(); },
     });
 
@@ -61,14 +61,14 @@ export default class PaperProcessorPlugin extends Plugin {
     // ===== Full Pipeline Command =====
     this.addCommand({
       id: "full-pipeline",
-      name: "Run full pipeline (OCR → Translate → Blog)",
+      name: "Run full pipeline (OCR → translate → blog)",
       callback: () => { void this.runFullPipeline(); },
     });
 
     // ===== Sidebar Command =====
     this.addCommand({
       id: "open-sidebar",
-      name: "Open Paper Processor sidebar",
+      name: "Open sidebar",
       callback: () => { void this.activateSidebar(); },
     });
 
@@ -83,7 +83,7 @@ export default class PaperProcessorPlugin extends Plugin {
         if (file instanceof TFile && file.extension === "pdf") {
           menu.addItem((item) => {
             item
-              .setTitle("Convert to Markdown (OCR)")
+              .setTitle("Convert to markdown (OCR)")
               .setIcon("file-text")
               .onClick(() => { void this.ocrFile(file); });
           });
