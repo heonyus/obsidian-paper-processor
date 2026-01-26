@@ -25,7 +25,7 @@ export default class PaperProcessorPlugin extends Plugin {
     // ===== OCR Command =====
     this.addCommand({
       id: "ocr-pdf",
-      name: "Convert PDF to markdown (OCR)",
+      name: "Convert pdf to markdown (ocr)",
       callback: () => { void this.runOCR(); },
     });
 
@@ -61,7 +61,7 @@ export default class PaperProcessorPlugin extends Plugin {
     // ===== Full Pipeline Command =====
     this.addCommand({
       id: "full-pipeline",
-      name: "Run full pipeline (OCR → translate → blog)",
+      name: "Run full pipeline (ocr → translate → blog)",
       callback: () => { void this.runFullPipeline(); },
     });
 
@@ -83,7 +83,7 @@ export default class PaperProcessorPlugin extends Plugin {
         if (file instanceof TFile && file.extension === "pdf") {
           menu.addItem((item) => {
             item
-              .setTitle("Convert to markdown (OCR)")
+              .setTitle("Convert to markdown (ocr)")
               .setIcon("file-text")
               .onClick(() => { void this.ocrFile(file); });
           });
@@ -135,7 +135,7 @@ export default class PaperProcessorPlugin extends Plugin {
 
   private runOCR(): void {
     if (!this.settings.mistralApiKey) {
-      new Notice("Please configure Mistral API key in settings first");
+      new Notice("Please configure Mistral api key in settings first");
       return;
     }
 
@@ -164,7 +164,7 @@ export default class PaperProcessorPlugin extends Plugin {
 
   private runTranslation(): void {
     if (!this.settings.grokApiKey) {
-      new Notice("Please configure Grok API key in settings first");
+      new Notice("Please configure Grok api key in settings first");
       return;
     }
 
@@ -175,7 +175,7 @@ export default class PaperProcessorPlugin extends Plugin {
 
   private async translateCurrentFile(file: TFile) {
     if (!this.settings.grokApiKey) {
-      new Notice("Please configure Grok API key in settings first");
+      new Notice("Please configure Grok api key in settings first");
       return;
     }
 
@@ -207,7 +207,7 @@ export default class PaperProcessorPlugin extends Plugin {
 
   private runBlogGeneration(): void {
     if (!this.settings.geminiApiKey) {
-      new Notice("Please configure Gemini API key in settings first");
+      new Notice("Please configure Gemini api key in settings first");
       return;
     }
 

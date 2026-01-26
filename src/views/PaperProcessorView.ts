@@ -244,7 +244,7 @@ export class PaperProcessorView extends ItemView {
 
     const arxivLink = actions.createEl("a", {
       cls: "pp-btn pp-btn-secondary",
-      text: "arXiv",
+      text: "Arxiv",
       href: paper.arxivUrl,
     });
     arxivLink.setAttr("target", "_blank");
