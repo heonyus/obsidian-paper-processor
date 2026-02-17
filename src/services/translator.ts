@@ -73,7 +73,7 @@ const FAITHFUL_TRANSLATION_PROMPT = `You are a professional translator specializ
 ## Translation Style
 
 - Image syntax protection rule:
-  - Preserve all Markdown image links exactly as input, including `![alt](path)` and `![[path]]`.
+  - Preserve all Markdown image links exactly as input, including \`![alt](path)\` and \`![[path]]\`.
   - Do not remove, split, reformat, or rename image links during translation.
 
 - Use formal academic tone appropriate for {target_language}
@@ -354,7 +354,8 @@ export class TranslatorService {
   }
 
   private splitContentByImageMarkdown(text: string): string[] {
-    const imagePattern = /!\[[^\]]*\]\(\s*(?:<[^>]+>|[^)\s]+(?:\s+(?:\"[^\"]*\"|'[^']*'))?)\s*\)|!\[\[[^\]]+\]\]|<img\b[^>]*\bsrc=(?:"[^"]*"|'[^']*')[^>]*>/gi;
+    const imagePattern =
+      /!\[[^\]]*\]\((?:\s*<[^>]+>\s*|[^)\s]+(?:\s+(?:"[^"]*"|'[^']*'))?\s*)\)|!\[\[[^\]]+\]\]|<img\b[^>]*\bsrc=(?:"[^"]*"|'[^']*')[^>]*>/gi;
     const chunks: string[] = [];
     let currentIndex = 0;
 
@@ -377,7 +378,7 @@ export class TranslatorService {
 
   private isImageMarkdownTag(text: string): boolean {
     const trimmed = text.trim();
-    return /^!\[[^\]]*\]\(\s*(?:<[^>]+>|[^)\s]+(?:\s+(?:\"[^\"]*\"|'[^']*'))?\s*\)$/.test(trimmed)
+    return /^!\[[^\]]*\]\((?:\s*<[^>]+>\s*|[^)\s]+(?:\s+(?:"[^"]*"|'[^']*'))?)\s*\)$/.test(trimmed)
       || /^!\[\[[^\]]+\]\]$/.test(trimmed)
       || /^<img\b[^>]*\bsrc=(?:"[^"]*"|'[^']*')[^>]*>$/i.test(trimmed);
   }
