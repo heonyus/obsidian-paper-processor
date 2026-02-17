@@ -354,7 +354,7 @@ export class TranslatorService {
   }
 
   private splitContentByImageMarkdown(text: string): string[] {
-    const imagePattern = /!\[[^\]]*\]\([^\)]+\)|!\[\[[^\]]+\]\]/g;
+    const imagePattern = /!\[[^\]]*\]\(\s*(?:<[^>]+>|[^)\s]+(?:\s+(?:\"[^\"]*\"|'[^']*'))?)\s*\)|!\[\[[^\]]+\]\]|<img\b[^>]*\bsrc=(?:"[^"]*"|'[^']*')[^>]*>/gi;
     const chunks: string[] = [];
     let currentIndex = 0;
 
@@ -376,7 +376,10 @@ export class TranslatorService {
   }
 
   private isImageMarkdownTag(text: string): boolean {
-    return /^!\[[^\]]*\]\([^)]+\)$/.test(text) || /^!\[\[[^\]]+\]\]$/.test(text);
+    const trimmed = text.trim();
+    return /^!\[[^\]]*\]\(\s*(?:<[^>]+>|[^)\s]+(?:\s+(?:\"[^\"]*\"|'[^']*'))?\s*\)$/.test(trimmed)
+      || /^!\[\[[^\]]+\]\]$/.test(trimmed)
+      || /^<img\b[^>]*\bsrc=(?:"[^"]*"|'[^']*')[^>]*>$/i.test(trimmed);
   }
 
   private splitByPages(content: string): string[] {
