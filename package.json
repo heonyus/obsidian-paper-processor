@@ -1,6 +1,6 @@
 {
   "name": "obsidian-paper-processor",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Obsidian plugin for academic paper processing: OCR, translation, blog generation, and slide creation",
   "main": "main.js",
   "scripts": {

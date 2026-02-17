@@ -72,6 +72,10 @@ const FAITHFUL_TRANSLATION_PROMPT = `You are a professional translator specializ
 
 ## Translation Style
 
+- Image syntax protection rule:
+  - Preserve all Markdown image links exactly as input, including `![alt](path)` and `![[path]]`.
+  - Do not remove, split, reformat, or rename image links during translation.
+
 - Use formal academic tone appropriate for {target_language}
 - Use declarative statements
 - Maintain scholarly register throughout
@@ -189,73 +193,91 @@ export class TranslatorService {
 
     for (let i = 0; i < pages.length; i++) {
       const page = pages[i];
+      const pageChunks = this.splitContentByImageMarkdown(page);
+
       const pageWords = page.split(/\s+/).length;
       const percent = Math.round(((i + 1) / pages.length) * 100);
 
       this.updateProgress("translating", `📖 Page ${i + 1}/${pages.length}: ${pageWords.toLocaleString()} words`, percent, i + 1, pages.length);
 
-      // Build prompt with context and target language
-      const prompt = FAITHFUL_TRANSLATION_PROMPT
-        .replace(/{target_language}/g, targetLanguage)
-        .replace("{previous_context}", previousContext)
-        .replace("{text}", page);
-
-      let result: { success: boolean; data?: string; error?: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } };
-
       const pageStartTime = Date.now();
+      let translated = "";
+      let chunkContext = previousContext;
 
-      if (isGemini) {
-        const geminiClient = new GeminiClient(this.settings.geminiApiKey, model);
-        result = await geminiClient.generateContent(prompt, { temperature: 0.3, maxOutputTokens: 16000 });
-      } else {
-        const client = this.createClient();
-        result = await client.chatCompletion([
-          { role: "user", content: prompt },
-        ], { temperature: 0.3, maxTokens: 16000 });
+      for (const chunk of pageChunks) {
+        if (!chunk.trim()) {
+          translated += chunk;
+          continue;
+        }
+
+        if (this.isImageMarkdownTag(chunk)) {
+          translated += chunk;
+          continue;
+        }
+
+        // Build prompt with context and target language
+        const prompt = FAITHFUL_TRANSLATION_PROMPT
+          .replace(/{target_language}/g, targetLanguage)
+          .replace("{previous_context}", chunkContext)
+          .replace("{text}", chunk);
+
+        let result: { success: boolean; data?: string; error?: string; usage?: { promptTokens: number; completionTokens: number; totalTokens: number } };
+
+        if (isGemini) {
+          const geminiClient = new GeminiClient(this.settings.geminiApiKey, model);
+          result = await geminiClient.generateContent(prompt, { temperature: 0.3, maxOutputTokens: 16000 });
+        } else {
+          const client = this.createClient();
+          result = await client.chatCompletion([
+            { role: "user", content: prompt },
+          ], { temperature: 0.3, maxTokens: 16000 });
+        }
+
+        if (!result.success || !result.data) {
+          this.updateProgress("translating", `❌ Page ${i + 1} failed: ${result.error}`, percent, i + 1, pages.length);
+          return { success: false, error: result.error || "Translation failed" };
+        }
+
+        // Record actual usage if available, otherwise estimate
+        if (result.usage) {
+          const cost = usageTracker.recordUsage({
+            provider,
+            model,
+            feature: "translation",
+            usage: result.usage,
+          });
+          totalInputTokens += result.usage.promptTokens;
+          totalOutputTokens += result.usage.completionTokens;
+          totalCost += cost.totalCost;
+        } else {
+          // Fallback to estimation
+          const estimatedInput = Math.round(prompt.length / 4);
+          const estimatedOutput = Math.round(result.data.length / 4);
+          totalInputTokens += estimatedInput;
+          totalOutputTokens += estimatedOutput;
+        }
+
+        // Remove code blocks if LLM wrapped output
+        let translatedChunk = result.data;
+        if (translatedChunk.startsWith("```")) {
+          const lines = translatedChunk.split("\n");
+          if (lines[0].startsWith("```")) {
+            lines.shift();
+          }
+          if (lines.length > 0 && lines[lines.length - 1].trim() === "```") {
+            lines.pop();
+          }
+          translatedChunk = lines.join("\n");
+        }
+
+        translated += translatedChunk;
+        if (translatedChunk.trim()) {
+          chunkContext = translated.slice(-200);
+        }
       }
 
       const pageElapsed = ((Date.now() - pageStartTime) / 1000).toFixed(1);
-
-      if (!result.success || !result.data) {
-        this.updateProgress("translating", `❌ Page ${i + 1} failed: ${result.error}`, percent, i + 1, pages.length);
-        return { success: false, error: result.error || "Translation failed" };
-      }
-
-      // Record actual usage if available, otherwise estimate
-      if (result.usage) {
-        const cost = usageTracker.recordUsage({
-          provider,
-          model,
-          feature: "translation",
-          usage: result.usage,
-        });
-        totalInputTokens += result.usage.promptTokens;
-        totalOutputTokens += result.usage.completionTokens;
-        totalCost += cost.totalCost;
-        this.updateProgress("translating",
-          `✅ Page ${i + 1} done in ${pageElapsed}s (${formatTokens(result.usage.totalTokens)} tokens, ${formatCost(cost.totalCost)})`,
-          percent, i + 1, pages.length);
-      } else {
-        // Fallback to estimation
-        const estimatedInput = Math.round(prompt.length / 4);
-        const estimatedOutput = Math.round(result.data.length / 4);
-        totalInputTokens += estimatedInput;
-        totalOutputTokens += estimatedOutput;
-        this.updateProgress("translating", `✅ Page ${i + 1} done in ${pageElapsed}s (~${(estimatedInput + estimatedOutput).toLocaleString()} tokens est.)`, percent, i + 1, pages.length);
-      }
-
-      // Remove code blocks if LLM wrapped output
-      let translated = result.data;
-      if (translated.startsWith("```")) {
-        const lines = translated.split("\n");
-        if (lines[0].startsWith("```")) {
-          lines.shift();
-        }
-        if (lines.length > 0 && lines[lines.length - 1].trim() === "```") {
-          lines.pop();
-        }
-        translated = lines.join("\n");
-      }
+      this.updateProgress("translating", `✅ Page ${i + 1} done in ${pageElapsed}s`, percent, i + 1, pages.length);
 
       translations.push(translated);
 
@@ -329,6 +351,35 @@ export class TranslatorService {
 
     console.debug(`[Translator] Model: ${model}, API: ${baseUrl}`);
     return new OpenAICompatibleClient(baseUrl, apiKey, model);
+  }
+
+  private splitContentByImageMarkdown(text: string): string[] {
+    const imagePattern = /!\[[^\]]*\]\(\s*(?:<[^>]+>|[^)\s]+(?:\s+(?:\"[^\"]*\"|'[^']*'))?)\s*\)|!\[\[[^\]]+\]\]|<img\b[^>]*\bsrc=(?:"[^"]*"|'[^']*')[^>]*>/gi;
+    const chunks: string[] = [];
+    let currentIndex = 0;
+
+    let match = imagePattern.exec(text);
+    while (match !== null) {
+      if (match.index > currentIndex) {
+        chunks.push(text.slice(currentIndex, match.index));
+      }
+      chunks.push(match[0]);
+      currentIndex = match.index + match[0].length;
+      match = imagePattern.exec(text);
+    }
+
+    if (currentIndex < text.length) {
+      chunks.push(text.slice(currentIndex));
+    }
+
+    return chunks;
+  }
+
+  private isImageMarkdownTag(text: string): boolean {
+    const trimmed = text.trim();
+    return /^!\[[^\]]*\]\(\s*(?:<[^>]+>|[^)\s]+(?:\s+(?:\"[^\"]*\"|'[^']*'))?\s*\)$/.test(trimmed)
+      || /^!\[\[[^\]]+\]\]$/.test(trimmed)
+      || /^<img\b[^>]*\bsrc=(?:"[^"]*"|'[^']*')[^>]*>$/i.test(trimmed);
   }
 
   private splitByPages(content: string): string[] {
