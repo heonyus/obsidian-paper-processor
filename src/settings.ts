@@ -108,11 +108,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("xAI Grok API key")
+      .setName("XAI Grok API key")
       .setDesc("For Grok models (grok-4.1, grok-4, etc.)")
       .addText((text) =>
         text
-          .setPlaceholder("Enter your xAI API key")
+          .setPlaceholder("Enter your XAI API key")
           .setValue(this.plugin.settings.grokApiKey)
           .onChange(async (value) => {
             this.plugin.settings.grokApiKey = value;
@@ -193,7 +193,7 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       .setDesc("Folder where processed papers will be saved (relative to vault root)")
       .addText((text) =>
         text
-          .setPlaceholder("papers")
+          .setPlaceholder("Papers")
           .setValue(this.plugin.settings.outputFolder)
           .onChange(async (value) => {
             this.plugin.settings.outputFolder = value || "papers";
@@ -219,9 +219,9 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       .addDropdown((dropdown) =>
         dropdown
           // xAI Grok models (latest)
-          .addOption("grok-4.1-fast-non-reasoning", "Grok 4.1 fast non-reasoning (xAI)")
-          .addOption("grok-4.1-fast", "Grok 4.1 fast (xAI)")
-          .addOption("grok-4.1", "Grok 4.1 (xAI)")
+          .addOption("grok-4.1-fast-non-reasoning", "Grok 4.1 fast non-reasoning (XAI)")
+          .addOption("grok-4.1-fast", "Grok 4.1 fast (XAI)")
+          .addOption("grok-4.1", "Grok 4.1 (XAI)")
           // OpenAI models (latest: 5.2)
           .addOption("gpt-5.2", "GPT-5.2 (OpenAI)")
           .addOption("gpt-5.2-mini", "GPT-5.2 mini (OpenAI)")
@@ -275,9 +275,9 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       .addDropdown((dropdown) =>
         dropdown
           // xAI Grok models (latest)
-          .addOption("grok-4.1-fast-non-reasoning", "Grok 4.1 fast non-reasoning (xAI)")
-          .addOption("grok-4.1-fast", "Grok 4.1 fast (xAI)")
-          .addOption("grok-4.1", "Grok 4.1 (xAI)")
+          .addOption("grok-4.1-fast-non-reasoning", "Grok 4.1 fast non-reasoning (XAI)")
+          .addOption("grok-4.1-fast", "Grok 4.1 fast (XAI)")
+          .addOption("grok-4.1", "Grok 4.1 (XAI)")
           // OpenAI models (latest: 5.2)
           .addOption("gpt-5.2", "GPT-5.2 (OpenAI)")
           .addOption("gpt-5.2-mini", "GPT-5.2 mini (OpenAI)")

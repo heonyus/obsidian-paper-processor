@@ -16,7 +16,7 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
   // Mistral OCR
   "mistral-ocr-latest": { inputPer1M: 1.00, outputPer1M: 1.00 },
 
-  // xAI Grok models
+  // XAI Grok models
   "grok-4.1-fast-non-reasoning": { inputPer1M: 0.10, outputPer1M: 0.30 },
   "grok-4.1-fast": { inputPer1M: 0.20, outputPer1M: 0.50 },
   "grok-4.1": { inputPer1M: 2.00, outputPer1M: 10.00 },
@@ -49,7 +49,7 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
  * Get provider name from model ID
  */
 export function getProviderFromModel(model: string): string {
-  if (model.startsWith("grok-")) return "xAI";
+  if (model.startsWith("grok-")) return "XAI";
   if (model.startsWith("gpt-")) return "OpenAI";
   if (model.startsWith("claude-")) return "Anthropic";
   if (model.startsWith("gemini-")) return "Google";

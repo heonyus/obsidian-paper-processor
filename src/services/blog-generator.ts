@@ -258,7 +258,7 @@ export class BlogGeneratorService {
    */
   private checkApiKey(model: string): string | null {
     if (model.startsWith("grok-") && !this.settings.grokApiKey) {
-      return "xAI Grok API key not configured. Please set it in plugin settings.";
+      return "XAI Grok API key not configured. Please set it in plugin settings.";
     }
     if (model.startsWith("gpt-") && !this.settings.openaiApiKey) {
       return "OpenAI API key not configured. Please set it in plugin settings.";
