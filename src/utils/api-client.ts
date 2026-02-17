@@ -571,7 +571,7 @@ export class MistralOCRClient {
 }
 
 export function showError(message: string): void {
-  new Notice(`Paper Processor Error: ${message}`, 5000);
+  new Notice(`Paper processor error: ${message}`, 5000);
 }
 
 export function showSuccess(message: string): void {

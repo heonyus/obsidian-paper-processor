@@ -88,18 +88,18 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     // ===== API Keys Section =====
-    new Setting(containerEl).setName("Api keys").setHeading();
+    new Setting(containerEl).setName("API keys").setHeading();
     containerEl.createEl("p", {
       text: "Enter your API keys. These are stored locally and never sent anywhere except to the respective API services.",
       cls: "setting-item-description"
     });
 
     new Setting(containerEl)
-      .setName("Mistral api key")
-      .setDesc("Required for ocr functionality (Mistral ocr)")
+      .setName("Mistral API key")
+      .setDesc("Required for OCR functionality (Mistral OCR)")
       .addText((text) =>
         text
-          .setPlaceholder("Enter your Mistral api key")
+          .setPlaceholder("Enter your Mistral API key")
           .setValue(this.plugin.settings.mistralApiKey)
           .onChange(async (value) => {
             this.plugin.settings.mistralApiKey = value;
@@ -108,11 +108,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("xAI Grok api key")
+      .setName("xAI Grok API key")
       .setDesc("For Grok models (grok-4.1, grok-4, etc.)")
       .addText((text) =>
         text
-          .setPlaceholder("Enter your xAI api key")
+          .setPlaceholder("Enter your xAI API key")
           .setValue(this.plugin.settings.grokApiKey)
           .onChange(async (value) => {
             this.plugin.settings.grokApiKey = value;
@@ -121,11 +121,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("OpenAI api key")
+      .setName("OpenAI API key")
       .setDesc("For GPT models (gpt-5.2, gpt-4o, etc.)")
       .addText((text) =>
         text
-          .setPlaceholder("Enter your OpenAI api key")
+          .setPlaceholder("Enter your OpenAI API key")
           .setValue(this.plugin.settings.openaiApiKey)
           .onChange(async (value) => {
             this.plugin.settings.openaiApiKey = value;
@@ -134,11 +134,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Anthropic api key")
+      .setName("Anthropic API key")
       .setDesc("For Claude models (claude-4.5-opus, claude-4.5-sonnet, etc.)")
       .addText((text) =>
         text
-          .setPlaceholder("Enter your Anthropic api key")
+          .setPlaceholder("Enter your Anthropic API key")
           .setValue(this.plugin.settings.anthropicApiKey)
           .onChange(async (value) => {
             this.plugin.settings.anthropicApiKey = value;
@@ -147,11 +147,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Google Gemini api key")
+      .setName("Google Gemini API key")
       .setDesc("For Gemini models (gemini-3-pro-preview, gemini-3-flash-preview, etc.)")
       .addText((text) =>
         text
-          .setPlaceholder("Enter your Google Gemini api key")
+          .setPlaceholder("Enter your Google Gemini API key")
           .setValue(this.plugin.settings.geminiApiKey)
           .onChange(async (value) => {
             this.plugin.settings.geminiApiKey = value;
@@ -160,11 +160,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("DeepSeek api key")
+      .setName("DeepSeek API key")
       .setDesc("For DeepSeek models (deepseek-r1, deepseek-v3, etc.)")
       .addText((text) =>
         text
-          .setPlaceholder("Enter your DeepSeek api key")
+          .setPlaceholder("Enter your DeepSeek API key")
           .setValue(this.plugin.settings.deepseekApiKey)
           .onChange(async (value) => {
             this.plugin.settings.deepseekApiKey = value;
@@ -173,11 +173,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Groq api key")
+      .setName("Groq API key")
       .setDesc("For fast inference models via Groq")
       .addText((text) =>
         text
-          .setPlaceholder("Enter your Groq api key")
+          .setPlaceholder("Enter your Groq API key")
           .setValue(this.plugin.settings.groqApiKey)
           .onChange(async (value) => {
             this.plugin.settings.groqApiKey = value;
@@ -205,8 +205,8 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Models").setHeading();
 
     new Setting(containerEl)
-      .setName("Ocr model")
-      .setDesc("Mistral model for ocr processing (fixed)")
+      .setName("OCR model")
+      .setDesc("Mistral model for OCR processing (fixed).")
       .addText((text) =>
         text
           .setValue(this.plugin.settings.ocrModel)
@@ -223,9 +223,9 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           .addOption("grok-4.1-fast", "Grok 4.1 fast (xAI)")
           .addOption("grok-4.1", "Grok 4.1 (xAI)")
           // OpenAI models (latest: 5.2)
-          .addOption("gpt-5.2", "Gpt-5.2 (OpenAI)")
-          .addOption("gpt-5.2-mini", "Gpt-5.2 mini (OpenAI)")
-          .addOption("gpt-4o", "Gpt-4o (OpenAI)")
+          .addOption("gpt-5.2", "GPT-5.2 (OpenAI)")
+          .addOption("gpt-5.2-mini", "GPT-5.2 mini (OpenAI)")
+          .addOption("gpt-4o", "GPT-4o (OpenAI)")
           // Anthropic Claude models (latest: 4.5)
           .addOption("claude-4.5-opus", "Claude 4.5 opus (Anthropic)")
           .addOption("claude-4.5-sonnet", "Claude 4.5 sonnet (Anthropic)")
@@ -235,11 +235,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           .addOption("gemini-3-flash-preview", "Gemini 3 flash preview (Google)")
           .addOption("gemini-2.5-flash-lite", "Gemini 2.5 flash-lite (Google)")
           // DeepSeek models
-          .addOption("deepseek-r1", "Deepseek r1 (DeepSeek)")
-          .addOption("deepseek-v3", "Deepseek v3 (DeepSeek)")
+          .addOption("deepseek-r1", "DeepSeek r1 (DeepSeek)")
+          .addOption("deepseek-v3", "DeepSeek v3 (DeepSeek)")
           // Groq models (fast inference)
-          .addOption("llama-3.3-70b-versatile", "Llama 3.3 70b (Groq)")
-          .addOption("deepseek-r1-distill-llama-70b", "Deepseek r1 distill 70b (Groq)")
+          .addOption("llama-3.3-70b-versatile", "Llama 3.3 70B (Groq)")
+          .addOption("deepseek-r1-distill-llama-70b", "DeepSeek r1 distill 70B (Groq)")
           .setValue(this.plugin.settings.translationModel)
           .onChange(async (value) => {
             this.plugin.settings.translationModel = value;
@@ -255,13 +255,13 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           .addOption("Korean", "Korean (한국어)")
           .addOption("Japanese", "Japanese (日本語)")
           .addOption("Chinese", "Chinese (中文)")
-          .addOption("Spanish", "spanish (Español)")
-          .addOption("French", "french (Français)")
-          .addOption("German", "german (Deutsch)")
-          .addOption("Portuguese", "portuguese (Português)")
-          .addOption("Russian", "russian (Русский)")
-          .addOption("Italian", "italian (Italiano)")
-          .addOption("Vietnamese", "vietnamese (Tiếng Việt)")
+          .addOption("Spanish", "Spanish (Español)")
+          .addOption("French", "French (Français)")
+          .addOption("German", "German (Deutsch)")
+          .addOption("Portuguese", "Portuguese (Português)")
+          .addOption("Russian", "Russian (Русский)")
+          .addOption("Italian", "Italian (Italiano)")
+          .addOption("Vietnamese", "Vietnamese (Tiếng Việt)")
           .setValue(this.plugin.settings.translationLanguage)
           .onChange(async (value) => {
             this.plugin.settings.translationLanguage = value;
@@ -279,9 +279,9 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           .addOption("grok-4.1-fast", "Grok 4.1 fast (xAI)")
           .addOption("grok-4.1", "Grok 4.1 (xAI)")
           // OpenAI models (latest: 5.2)
-          .addOption("gpt-5.2", "Gpt-5.2 (OpenAI)")
-          .addOption("gpt-5.2-mini", "Gpt-5.2 mini (OpenAI)")
-          .addOption("gpt-4o", "Gpt-4o (OpenAI)")
+          .addOption("gpt-5.2", "GPT-5.2 (OpenAI)")
+          .addOption("gpt-5.2-mini", "GPT-5.2 mini (OpenAI)")
+          .addOption("gpt-4o", "GPT-4o (OpenAI)")
           // Anthropic Claude models (latest: 4.5)
           .addOption("claude-4.5-opus", "Claude 4.5 opus (Anthropic)")
           .addOption("claude-4.5-sonnet", "Claude 4.5 sonnet (Anthropic)")
@@ -291,11 +291,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
           .addOption("gemini-3-flash-preview", "Gemini 3 flash preview (Google)")
           .addOption("gemini-2.5-flash-lite", "Gemini 2.5 flash-lite (Google)")
           // DeepSeek models
-          .addOption("deepseek-r1", "Deepseek r1 (DeepSeek)")
-          .addOption("deepseek-v3", "Deepseek v3 (DeepSeek)")
+          .addOption("deepseek-r1", "DeepSeek r1 (DeepSeek)")
+          .addOption("deepseek-v3", "DeepSeek v3 (DeepSeek)")
           // Groq models (fast inference)
-          .addOption("llama-3.3-70b-versatile", "Llama 3.3 70b (Groq)")
-          .addOption("deepseek-r1-distill-llama-70b", "Deepseek r1 distill 70b (Groq)")
+          .addOption("llama-3.3-70b-versatile", "Llama 3.3 70B (Groq)")
+          .addOption("deepseek-r1-distill-llama-70b", "DeepSeek r1 distill 70B (Groq)")
           .setValue(this.plugin.settings.blogModel)
           .onChange(async (value) => {
             this.plugin.settings.blogModel = value;
@@ -349,11 +349,11 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       );
 
     // ===== arXiv Settings Section =====
-    new Setting(containerEl).setName("Arxiv").setHeading();
+    new Setting(containerEl).setName("arXiv").setHeading();
 
     new Setting(containerEl)
       .setName("Default category")
-      .setDesc("Default arxiv category filter for searches")
+      .setDesc("Default arXiv category filter for searches")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("", "All categories")
@@ -392,7 +392,7 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
       .setDesc("Which tab to show when opening the sidebar")
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("search", "Search (arxiv)")
+          .addOption("search", "Search (arXiv)")
           .addOption("process", "Process (PDF)")
           .addOption("papers", "Papers (library)")
           .addOption("usage", "Usage (statistics)")
@@ -432,7 +432,7 @@ export class PaperProcessorSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Cost alert threshold")
-      .setDesc("Show a warning when session cost exceeds this amount (usd). set to 0 to disable")
+      .setDesc("Show a warning when session cost exceeds this amount (USD). Set to 0 to disable")
       .addText((text) =>
         text
           .setPlaceholder("0")

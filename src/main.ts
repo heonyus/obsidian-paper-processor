@@ -25,7 +25,7 @@ export default class PaperProcessorPlugin extends Plugin {
     // ===== OCR Command =====
     this.addCommand({
       id: "ocr-pdf",
-      name: "Convert pdf to markdown (ocr)",
+      name: "Convert PDF to markdown (OCR)",
       callback: () => { void this.runOCR(); },
     });
 
@@ -61,7 +61,7 @@ export default class PaperProcessorPlugin extends Plugin {
     // ===== Full Pipeline Command =====
     this.addCommand({
       id: "full-pipeline",
-      name: "Run full pipeline (ocr → translate → blog)",
+      name: "Run full pipeline (OCR → translate → blog)",
       callback: () => { void this.runFullPipeline(); },
     });
 
@@ -83,7 +83,7 @@ export default class PaperProcessorPlugin extends Plugin {
         if (file instanceof TFile && file.extension === "pdf") {
           menu.addItem((item) => {
             item
-              .setTitle("Convert to markdown (ocr)")
+              .setTitle("Convert to markdown (OCR)")
               .setIcon("file-text")
               .onClick(() => { void this.ocrFile(file); });
           });
@@ -135,7 +135,7 @@ export default class PaperProcessorPlugin extends Plugin {
 
   private runOCR(): void {
     if (!this.settings.mistralApiKey) {
-      new Notice("Please configure Mistral api key in settings first");
+      new Notice("Please configure the Mistral API key in settings first.");
       return;
     }
 
@@ -143,7 +143,7 @@ export default class PaperProcessorPlugin extends Plugin {
   }
 
   private async ocrFile(file: TFile) {
-    const progress = new ProgressModal(this.app, "OCR Processing");
+    const progress = new ProgressModal(this.app, "OCR processing");
     progress.open();
 
     const service = new OCRService(this.app, this.settings);
@@ -164,7 +164,7 @@ export default class PaperProcessorPlugin extends Plugin {
 
   private runTranslation(): void {
     if (!this.settings.grokApiKey) {
-      new Notice("Please configure Grok api key in settings first");
+      new Notice("Please configure the Grok API key in settings first.");
       return;
     }
 
@@ -175,7 +175,7 @@ export default class PaperProcessorPlugin extends Plugin {
 
   private async translateCurrentFile(file: TFile) {
     if (!this.settings.grokApiKey) {
-      new Notice("Please configure Grok api key in settings first");
+      new Notice("Please configure the Grok API key in settings first.");
       return;
     }
 
@@ -207,7 +207,7 @@ export default class PaperProcessorPlugin extends Plugin {
 
   private runBlogGeneration(): void {
     if (!this.settings.geminiApiKey) {
-      new Notice("Please configure Gemini api key in settings first");
+      new Notice("Please configure the Gemini API key in settings first.");
       return;
     }
 
@@ -243,7 +243,7 @@ export default class PaperProcessorPlugin extends Plugin {
     if (!this.settings.geminiApiKey) missingKeys.push("Gemini (Translation/Blog)");
 
     if (missingKeys.length > 0) {
-      new Notice(`Missing API keys: ${missingKeys.join(", ")}. Please configure in settings.`);
+      new Notice(`Missing API keys: ${missingKeys.join(", ")}. Please configure them in settings.`);
       return;
     }
 

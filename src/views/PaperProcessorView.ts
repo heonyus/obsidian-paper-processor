@@ -244,7 +244,7 @@ export class PaperProcessorView extends ItemView {
 
     const arxivLink = actions.createEl("a", {
       cls: "pp-btn pp-btn-secondary",
-      text: "Arxiv",
+      text: "arXiv",
       href: paper.arxivUrl,
     });
     arxivLink.setAttr("target", "_blank");
@@ -476,7 +476,7 @@ export class PaperProcessorView extends ItemView {
     const pdfFiles = this.app.vault.getFiles().filter((f) => f.extension === "pdf");
 
     if (pdfFiles.length === 0) {
-      this.showNotice("No PDF files found in vault");
+      this.showNotice("No PDF files found in the vault.");
       return;
     }
 

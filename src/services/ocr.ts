@@ -84,7 +84,7 @@ export class OCRService {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
       if (!result.success || !result.data) {
-        this.updateProgress("processing", `❌ OCR API Error: ${result.error}`, 30);
+        this.updateProgress("processing", `❌ OCR API error: ${result.error}`, 30);
         return {
           success: false,
           error: result.error || "OCR processing failed",
