@@ -217,7 +217,7 @@ export default class PaperProcessorPlugin extends Plugin {
   }
 
   private async generateBlog(folder: string) {
-    const progress = new ProgressModal(this.app, "Blog Generation");
+    const progress = new ProgressModal(this.app, "Blog generation");
     progress.open();
 
     const service = new BlogGeneratorService(this.app, this.settings);
